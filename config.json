@@ -1,0 +1,20 @@
+{
+	"mindustryJars": {
+		"folderPath": "C:\\Software\\mindustry_jars\\",
+		"versionNames": {
+			"126.2": "v126.2.jar",
+			"131": "v131.jar",
+			"134.1": "v134.1.jar",
+			"135": "v135.jar",
+			"foo": "foo.jar",
+			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
+		}
+	},
+	"jvmArgs": [
+		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
+		"-XX:+ShowCodeDetailsInExceptionMessages"
+	],
+	"externalMods": [
+		"C:\\Bala\\Mindustry\\mods\\thaumic-industries\\build\\libs\\thaumic-industriesDesktop.jar"
+	]
+}

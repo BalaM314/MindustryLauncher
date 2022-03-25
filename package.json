@@ -1,0 +1,23 @@
+{
+  "name": "mindustrylauncher",
+  "version": "1.0.0",
+  "description": "A custom mindustry launcher, with useful features like auto-restart and better logging.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BalaM314/MindustryLauncher.git"
+  },
+  "keywords": [
+    "mindustry"
+  ],
+  "author": "BalaM314",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/BalaM314/MindustryLauncher/issues"
+  },
+  "homepage": "https://github.com/BalaM314/MindustryLauncher#readme",
+  "type": "commonjs"
+}
