@@ -4,7 +4,7 @@ import { ChildProcess, spawn } from "child_process";
 
 process.chdir(`C:\\coding\\Node.js\\MindustryLauncher`);
 
-const settings: {
+interface Settings {
 	mindustryJars: {
 		folderPath: string;
 		versionNames: {
@@ -13,9 +13,17 @@ const settings: {
 	};
 	jvmArgs: string[];
 	externalMods: string[];
-} = JSON.parse(fs.readFileSync("config.json", "utf-8"));
+	restartAutomaticallyOnModUpdate: boolean;
+	logging: {
+		path: string;
+		enabled: boolean;
+	};
+}
+
+const settings:Settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
 
 let mindustryProcess:ChildProcess;
+let currentLogStream:fs.WriteStream;
 
 
 
@@ -37,21 +45,19 @@ function parseArgs(args: string[]){
 }
 
 function startProcess(_filePath: string, _jvmArgs: string[]){
-	let proc = spawn("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
-	proc.stdout?.on("data", (data) => {
-		process.stdout.write(data);
-	});
-
-	proc.stderr?.on("data", (data) => {
-		process.stderr.write(data);
-	});
+	const proc = spawn("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
+	const d = new Date();
+	currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
+	proc.stdout.pipe(process.stdout);
+	proc.stdout.pipe(currentLogStream);
+	proc.stderr.pipe(process.stderr);
 	return proc;
 }
 
 function restart(_filePath: string, _jvmArgs: string[]){
 	console.log("Restarting!");
 	mindustryProcess.removeAllListeners();
-	mindustryProcess.kill("SIGTERM");
+	mindustryProcess.kill("SIGTERM");//todo see if this causes issues
 	mindustryProcess = startProcess(_filePath, _jvmArgs);
 	console.log("Started new process.");
 }
@@ -123,11 +129,20 @@ function main(){
 
 	for(var file of settings.externalMods){
 		fs.watchFile(file, () => {
-			console.log(`File change detected! (${file}) Restarting...`);
+			console.log(`File change detected! (${file})`);
 			copyMods();
-			restart(filePath, settings.jvmArgs);
+			if(settings.restartAutomaticallyOnModUpdate)
+				restart(filePath, settings.jvmArgs);
 		});
 	}
 }
 
 main();
+
+function parseJSONC(data:string):Settings {
+	return JSON.parse(data.split("\n")
+		.filter(line => !/^[ \t]*\/\//.test(line))
+		.join("\n")
+	);
+	//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
+}
