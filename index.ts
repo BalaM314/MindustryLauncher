@@ -16,6 +16,17 @@ import * as fs from "fs";
 import { spawn, exec, type ChildProcess } from "child_process";
 import * as readline from "readline";
 
+function askQuestion(query:string): Promise<string> {
+	const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+	});
+
+	return new Promise(resolve => rl.question(query, ans => {
+		rl.close();
+		resolve(ans);
+	}))
+}
 
 const fileSeparator = process.platform == "win32" ? "\\" : "/";
 
@@ -36,48 +47,15 @@ if(parsedArgs["help"]){
 }
 
 if(parsedArgs["install"]){
-	console.log("Trying to install.");
-	if(/downloads/i.test(process.cwd())){
-		console.error("ew why am I in a downloads directory please move me");
-		process.exit(1);
-	}
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout
-	});
-	rl.question(`You want to install to ${process.cwd()}, right? [y/n]`, (response) => {
-		switch(response.toLowerCase()){
-			case "y": case "yes":
-				console.log("Installing...");
-				try {
-					fs.accessSync("config.json", fs.constants.R_OK);
-					console.log("config.json file found.");
-				} catch(err) {
-					console.log("Creating a config.json file...");
-					try {
-						fs.copyFileSync("template-config.json", "config.json");
-						console.log("Done.");
-					} catch(err){
-						console.error("Failed to create config.json file! " + (err as Error)?.message);
-						process.exit(1);
-					}
-				}
-				rl.question("You will need to edit the config.json file. Open it? [y/n]", (response) => {
-					switch(response.toLowerCase()){
-						case "y": case "yes":
-							exec("notepad config.json");
-							break;
-					}
-					console.log("Installation successful.");
-					process.exit(1);
-				})
-				break;
-			default:
-				console.log("Installation aborted.");
-				process.exit(1);
-		}
-	});
-
+	install()
+		.then(() => {
+			console.log("Installation completed!");
+			process.exit(0);
+		})
+		.catch((err) => {
+			console.log("Installation failed: " + (err as Error).message);
+			process.exit(1);
+		});
 } else {
 	try {
 		fs.accessSync("config.json", fs.constants.R_OK);
@@ -88,6 +66,36 @@ if(parsedArgs["install"]){
 	}
 }
 
+
+async function install(){
+	console.log("Trying to install.");
+	if(/downloads/i.test(process.cwd())){
+		console.error("ew why am I in a downloads directory please move me");
+		process.exit(1);
+	}
+	let response = (await askQuestion(`You want to install to ${process.cwd()}, right? [y/n]`)).toLowerCase();
+	if(response != "y" && response != "yes")
+		throw new Error("Installation aborted.");
+	console.log("Installing...");
+	try {
+		fs.accessSync("config.json", fs.constants.R_OK);
+		console.log("config.json file found.");
+	} catch(err) {
+		console.log("Creating a config.json file...");
+		try {
+			fs.copyFileSync("template-config.json", "config.json");
+			console.log("Done.");
+		} catch(err){
+			console.error("Failed to create config.json file! " + (err as Error)?.message);
+			process.exit(1);
+		}
+	}
+	response = (await askQuestion("You will need to edit the config.json file. Open it? [y/n]")).toLowerCase();
+	if(response == "y" || response == "yes")
+		exec("notepad config.json");
+	console.log("Installation successful.");
+	process.exit(1);
+}
 
 
 interface Settings {
@@ -134,7 +142,9 @@ function startProcess(_filePath: string, _jvmArgs: string[]){
 	const proc = spawn("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
 	const d = new Date();
 	if(settings.logging.enabled){
-		currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
+		currentLogStream = fs.createWriteStream(
+			`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
+		);
 		proc.stdout.pipe(currentLogStream);
 	}
 	proc.stdout.pipe(process.stdout);
