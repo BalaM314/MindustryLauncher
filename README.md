@@ -9,15 +9,22 @@ A custom launcher for Mindustry built with TypeScript and Node.JS.
 * [x] Relaunch on command
 * [x] Highly configurable
 * [x] Open source
+* [ ] Discord RPC
+* [ ] Steam achievement support
 
 ## Installation
-You will need Node.JS.
 
-You also need to copy the provided batch file into a directory on your path so you can just run `mindustry`.
+Warning: the installation is WIP and rather annoying if you are not tech-savvy.
 
-wait you also need to edit the batch file to point it at the launcher script
+Requirements: Node.JS
 
-umm better installation coming soon
+1. Download this folder somewhere, I recommend "C:\Mindustry\Launcher".
+2. Copy the provided batch file(mindustry.bat) into a directory on your PATH. This is done so you can type `mindustry` instead of `node C:\Mindustry\Launcher\index.js`.
+3. If you didn't download to C:\Mindustry\Launcher, open and edit the batch file in the way it says.
+4. Open a command prompt/terminal and run `mindustry --install`. If you get an error saying "'mindustry' is not recognized as an internal or external command", then relaunch the terminal, or the directory you put the batch file in isn't on the PATH.
+5. It will open config.json in a notepad document so you can complete the install.
+
+better installation coming soon
 
 ## Usage
 CLI only.

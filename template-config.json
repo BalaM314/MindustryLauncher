@@ -1,0 +1,35 @@
+{
+	//Hello! Please edit this file.
+	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
+	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
+	"mindustryJars": {
+		//Set this to a folder containing the .jar files for each version.
+		//Example: "folderPath": "C:\\Mindustry\\versions\\"
+		"folderPath": "[change this!]",
+		"versionNames": {
+			//List mapping your version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
+			//Format: "theVersionNameYouType": "theFileName.jar",
+			//To launch theFileName.jar, you would choose version theVersionNameYouType.
+			"126.2": "v126.2.jar",
+			"135": "v135.jar"
+			// "src": "C:\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
+		}
+	},
+	"jvmArgs": [
+		//JVM arguments, don't touch if you don't understand.
+		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
+		"-XX:+ShowCodeDetailsInExceptionMessages",
+		//Memory allocation, minimum 1G and maximum 2G.
+		"-Xmx2G",
+		"-Xms1G"
+	],
+	"externalMods": [
+		//List of external mods to copy into the mods folder automatically when the file changes.
+	],
+	"restartAutomaticallyOnModUpdate": true,
+	"logging": {
+		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
+		"path": "C:\\Mindustry\\logs\\",
+		"enabled": false
+	}
+}

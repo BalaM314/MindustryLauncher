@@ -1,10 +1,7 @@
 {
-	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
-	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
 		"folderPath": "C:\\Bala\\Mindustry\\versions\\",
 		"versionNames": {
-			//List mapping your version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
 			"126.2": "v126.2.jar",
 			"131": "v131.jar",
 			"134.1": "v134.1.jar",
@@ -16,12 +13,10 @@
 	"jvmArgs": [
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
 		"-XX:+ShowCodeDetailsInExceptionMessages",
-		//Memory allocation, minimum 1G and maximum 2G.
 		"-Xmx2G",
 		"-Xms1G"
 	],
 	"externalMods": [
-		//List of external mods to copy into the mods folder automatically when the file changes.
 		"C:\\Bala\\Mindustry\\mods\\thaumic-industries\\build\\libs\\thaumic-industriesDesktop.jar"
 	],
 	"restartAutomaticallyOnModUpdate": true,

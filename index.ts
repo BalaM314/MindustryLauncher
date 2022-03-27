@@ -13,10 +13,82 @@
  */
 
 import * as fs from "fs";
-import { ChildProcess, spawn } from "child_process";
+import { spawn, exec, type ChildProcess } from "child_process";
+import * as readline from "readline";
 
 
-process.chdir(`C:\\coding\\Node.js\\MindustryLauncher`);
+const fileSeparator = process.platform == "win32" ? "\\" : "/";
+
+process.chdir(process.argv[1].split(fileSeparator).slice(0,-1).join(fileSeparator));
+
+let parsedArgs: {
+	[index: string]: string;
+} = parseArgs(process.argv.slice(2));
+
+
+if(parsedArgs["help"]){
+	console.log(
+`Usage: mindustry [--help] [--version <version>]
+--help\tDisplays this help message and exits.
+--version\tSpecifies the version to use.`
+	);
+	process.exit();
+}
+
+if(parsedArgs["install"]){
+	console.log("Trying to install.");
+	if(/downloads/i.test(process.cwd())){
+		console.error("ew why am I in a downloads directory please move me");
+		process.exit(1);
+	}
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout
+	});
+	rl.question(`You want to install to ${process.cwd()}, right? [y/n]`, (response) => {
+		switch(response.toLowerCase()){
+			case "y": case "yes":
+				console.log("Installing...");
+				try {
+					fs.accessSync("config.json", fs.constants.R_OK);
+					console.log("config.json file found.");
+				} catch(err) {
+					console.log("Creating a config.json file...");
+					try {
+						fs.copyFileSync("template-config.json", "config.json");
+						console.log("Done.");
+					} catch(err){
+						console.error("Failed to create config.json file! " + (err as Error)?.message);
+						process.exit(1);
+					}
+				}
+				rl.question("You will need to edit the config.json file. Open it? [y/n]", (response) => {
+					switch(response.toLowerCase()){
+						case "y": case "yes":
+							exec("notepad config.json");
+							break;
+					}
+					console.log("Installation successful.");
+					process.exit(1);
+				})
+				break;
+			default:
+				console.log("Installation aborted.");
+				process.exit(1);
+		}
+	});
+
+} else {
+	try {
+		fs.accessSync("config.json", fs.constants.R_OK);
+	} catch(err) {
+		console.error("Can't find the config.json file!");
+		console.error("You may need to create one, try running again with --install.");
+		process.exit(1);
+	}
+}
+
+
 
 interface Settings {
 	mindustryJars: {
@@ -34,7 +106,7 @@ interface Settings {
 	};
 }
 
-const settings:Settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+let settings:Settings;
 
 let mindustryProcess:ChildProcess;
 let currentLogStream:fs.WriteStream;
@@ -61,9 +133,11 @@ function parseArgs(args: string[]){
 function startProcess(_filePath: string, _jvmArgs: string[]){
 	const proc = spawn("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
 	const d = new Date();
-	currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
+	if(settings.logging.enabled){
+		currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
+		proc.stdout.pipe(currentLogStream);
+	}
 	proc.stdout.pipe(process.stdout);
-	proc.stdout.pipe(currentLogStream);
 	proc.stderr.pipe(process.stderr);
 	return proc;
 }
@@ -87,27 +161,21 @@ function copyMods(){
 	}
 }
 
+function parseJSONC(data:string):Settings {
+	return JSON.parse(data.split("\n")
+		.filter(line => !/^[ \t]*\/\//.test(line))
+		.join("\n")
+	);
+	//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
+}
+
 function main(){
-	let state = "normal";
+	settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
 
 	for(let [version, jarName] of Object.entries(settings.mindustryJars.versionNames)){
 		if(jarName.includes(" ")){
 			throw new Error(`Jar name for version ${version} contains a space.`);
 		}
-	}
-
-	let parsedArgs: {
-		[index: string]: string;
-	} = parseArgs(process.argv.slice(2));
-
-
-	if(parsedArgs["help"]){
-		console.log(
-	`Usage: mindustry [--help] [--version <version>]
-	--help\tDisplays this help message and exits.
-	--version\tSpecifies the version to use.`
-		);
-		process.exit();
 	}
 
 	let jarName = settings.mindustryJars.versionNames[parsedArgs["version"]] ?? settings.mindustryJars.versionNames["135"];
@@ -151,12 +219,5 @@ function main(){
 	}
 }
 
-main();
-
-function parseJSONC(data:string):Settings {
-	return JSON.parse(data.split("\n")
-		.filter(line => !/^[ \t]*\/\//.test(line))
-		.join("\n")
-	);
-	//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
-}
+if(!parsedArgs["install"])
+	main();
