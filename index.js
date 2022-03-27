@@ -39,7 +39,6 @@ if (parsedArgs["install"]) {
     install()
         .then(() => {
         console.log("Installation completed!");
-        process.exit(0);
     })
         .catch((err) => {
         console.log("Installation failed: " + err.message);
@@ -82,10 +81,11 @@ async function install() {
         }
     }
     response = (await askQuestion("You will need to edit the config.json file. Open it? [y/n]")).toLowerCase();
-    if (response == "y" || response == "yes")
+    if (response == "y" || response == "yes") {
+        console.log(response, child_process_1.exec);
         (0, child_process_1.exec)("notepad config.json");
-    console.log("Installation successful.");
-    process.exit(1);
+    }
+    return true;
 }
 let settings;
 let mindustryProcess;
