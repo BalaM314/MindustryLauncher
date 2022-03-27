@@ -2,13 +2,13 @@
 A custom launcher for Mindustry built with TypeScript and Node.JS.
 
 ## Features
-[x] Logging
-[x] Version selection
-[ ] Automatic version download
-[x] Automatically copies external mods on file update and relaunches
-[x] Relaunch on command
-[x] Highly configurable
-[x] Open source
+* [x] Logging
+* [x] Version selection
+* [ ] Automatic version download
+* [x] Automatically copies external mods on file update and relaunches
+* [x] Relaunch on command
+* [x] Highly configurable
+* [x] Open source
 
 ## Installation
 You will need Node.JS.
