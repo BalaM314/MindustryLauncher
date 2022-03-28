@@ -16,6 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const child_process_1 = require("child_process");
 const readline = require("readline");
+const https = require("https");
 function askQuestion(query) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -26,13 +27,18 @@ function askQuestion(query) {
         resolve(ans);
     }));
 }
-const fileSeparator = process.platform == "win32" ? "\\" : "/";
-process.chdir(process.argv[1].split(fileSeparator).slice(0, -1).join(fileSeparator));
+async function askYesOrNo(query) {
+    let response = await askQuestion(query);
+    return response == "y" || response == "yes";
+}
+const pathSeparator = process.platform == "win32" ? "\\" : "/";
+process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
 let parsedArgs = parseArgs(process.argv.slice(2));
 if (parsedArgs["help"]) {
-    console.log(`Usage: mindustry [--help] [--version <version>]
+    console.log(`Usage: mindustry [--install] [--help] [--version <version>]
 --help\tDisplays this help message and exits.
---version\tSpecifies the version to use.`);
+--version\tSpecifies the version to use.
+--install\t[WIP] Installs the launcher. Or tries to.`);
     process.exit();
 }
 if (parsedArgs["install"]) {
@@ -61,8 +67,7 @@ async function install() {
         console.error("ew why am I in a downloads directory please move me");
         process.exit(1);
     }
-    let response = (await askQuestion(`You want to install to ${process.cwd()}, right? [y/n]`)).toLowerCase();
-    if (response != "y" && response != "yes")
+    if (!await askYesOrNo(`You want to install to ${process.cwd()}, right? [y/n]`))
         throw new Error("Installation aborted.");
     console.log("Installing...");
     try {
@@ -80,9 +85,7 @@ async function install() {
             process.exit(1);
         }
     }
-    response = (await askQuestion("You will need to edit the config.json file. Open it? [y/n]")).toLowerCase();
-    if (response == "y" || response == "yes") {
-        console.log(response, child_process_1.exec);
+    if (await askYesOrNo("You will need to edit the config.json file. Open it? [y/n]")) {
         (0, child_process_1.exec)("notepad config.json");
     }
     return true;
@@ -106,6 +109,7 @@ function parseArgs(args) {
     return parsedArgs;
 }
 function startProcess(_filePath, _jvmArgs) {
+    copyMods();
     const proc = (0, child_process_1.spawn)("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
     const d = new Date();
     if (settings.logging.enabled) {
@@ -139,17 +143,65 @@ function parseJSONC(data) {
         .join("\n"));
     //Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
 }
-function main() {
+function downloadFile(version) {
+    return new Promise((resolve, reject) => {
+        https.get(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`, (res) => {
+            if (res.statusCode != 302)
+                return reject("Expected status 302, got " + res.statusCode);
+            if (res.headers.location)
+                return reject("Redirect location not given");
+            https.get(res.headers.location, (res) => {
+                const file = fs.createWriteStream(`${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
+                res.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    resolve("File downloaded!");
+                });
+            });
+        });
+    });
+}
+async function handleDownload() {
+    if (await askYesOrNo("Would you like to download the file?")) {
+        try {
+            console.log("Downloading...");
+            console.log("There's no status bar so you just have to trust me.");
+            downloadFile(parsedArgs["version"]);
+            console.log("Done!");
+            main(true);
+        }
+        catch (err) {
+            console.error("An error occured while downloading the file: ");
+            console.error(err);
+        }
+        return;
+    }
+}
+function main(recursive) {
     settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
-    for (let [version, jarName] of Object.entries(settings.mindustryJars.versionNames)) {
+    for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             throw new Error(`Jar name for version ${version} contains a space.`);
         }
     }
-    let jarName = settings.mindustryJars.versionNames[parsedArgs["version"]] ?? settings.mindustryJars.versionNames["135"];
+    let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"]}.jar`;
     let filePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
-    console.log(`Launching Mindustry version ${settings.mindustryJars.versionNames[parsedArgs["version"]] ? parsedArgs["version"] : "135"}`);
-    copyMods();
+    try {
+        fs.accessSync(filePath, fs.constants.R_OK);
+    }
+    catch (err) {
+        console.error(`Unable to access file ${jarName}.`);
+        if (recursive) {
+            console.error("Wait what? I just downloaded that.");
+            console.error("Please contact BalaM314 by filing an issue on Github.");
+        }
+        else {
+            console.error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.");
+            handleDownload();
+        }
+        return;
+    }
+    console.log(`Launching Mindustry version ${parsedArgs["version"]}`);
     mindustryProcess = startProcess(filePath, settings.jvmArgs);
     process.stdin.on("data", (data) => {
         switch (data.toString("utf-8").slice(0, -2)) {

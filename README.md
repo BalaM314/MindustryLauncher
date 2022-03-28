@@ -29,4 +29,4 @@ better installation coming soon
 ## Usage
 CLI only.
 
-`mindustry [--help] [--version <version>]`
+`mindustry [--help] [--install] [--version <version>]`

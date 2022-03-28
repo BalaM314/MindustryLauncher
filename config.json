@@ -1,11 +1,7 @@
 {
 	"mindustryJars": {
 		"folderPath": "C:\\Bala\\Mindustry\\versions\\",
-		"versionNames": {
-			"126.2": "v126.2.jar",
-			"131": "v131.jar",
-			"134.1": "v134.1.jar",
-			"135": "v135.jar",
+		"customVersionNames": {
 			"foo": "foo.jar",
 			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
 		}
