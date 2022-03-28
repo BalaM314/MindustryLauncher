@@ -189,8 +189,13 @@ function parseJSONC(data:string):Settings {
 function downloadFile(version:string){
 	return new Promise((resolve, reject) => {
 		https.get(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`, (res) => {
-			if(res.statusCode != 302) return reject("Expected status 302, got " + res.statusCode);
-			if(res.headers.location) return reject("Redirect location not given");
+			if(res.statusCode != 302){
+				if(res.statusCode == 404){
+					return reject("The specified version was not found.");
+				}
+				return reject("Expected status 302, got " + res.statusCode);
+			}
+			if(!res.headers.location) return reject("Redirect location not given");
 			https.get(res.headers.location!, (res) => {
 				const file = fs.createWriteStream(`${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
 				res.pipe(file);
@@ -204,11 +209,11 @@ function downloadFile(version:string){
 }
 
 async function handleDownload(){
-	if(await askYesOrNo("Would you like to download the file?")){
+	if(await askYesOrNo("Would you like to download the file? [y/n]")){
 		try {
 			console.log("Downloading...");
 			console.log("There's no status bar so you just have to trust me.");
-			downloadFile(parsedArgs["version"]);
+			await downloadFile("v"+parsedArgs["version"]);
 			console.log("Done!");
 			main(true);
 		} catch(err){
