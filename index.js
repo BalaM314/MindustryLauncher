@@ -85,7 +85,7 @@ async function install() {
             process.exit(1);
         }
     }
-    if (await askYesOrNo("You will need to edit the config.json file. Open it? [y/n]")) {
+    if (await askYesOrNo("The config.json file contains this program's settings. Open it? [y/n]")) {
         (0, child_process_1.exec)("notepad config.json");
     }
     return true;

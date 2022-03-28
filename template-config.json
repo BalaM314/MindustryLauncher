@@ -1,17 +1,14 @@
 {
-	//Hello! Please edit this file.
 	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
 	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
 		//Set this to a folder containing the .jar files for each version.
 		//Example: "folderPath": "C:\\Mindustry\\versions\\"
-		"folderPath": "[change this!]",
-		"versionNames": {
-			//List mapping your version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
+		"folderPath": "C:\\Mindustry\\Versions\\",
+		"customVersionNames": {
+			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
 			//Format: "theVersionNameYouType": "theFileName.jar",
 			//To launch theFileName.jar, you would choose version theVersionNameYouType.
-			"126.2": "v126.2.jar",
-			"135": "v135.jar"
 			// "src": "C:\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
 		}
 	},
