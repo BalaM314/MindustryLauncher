@@ -9,8 +9,6 @@ A custom launcher for Mindustry built with TypeScript and Node.JS.
 * [x] Relaunch on command
 * [x] Highly configurable
 * [x] Open source
-* [ ] Discord RPC
-* [ ] Steam achievement support
 
 ## Installation
 
