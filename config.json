@@ -2,8 +2,8 @@
 	"mindustryJars": {
 		"folderPath": "C:\\Bala\\Mindustry\\versions\\",
 		"customVersionNames": {
-			"foo": "foo.jar",
-			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
+			"foo": "C:\\Bala\\Mindustry\\src\\mindustry-client\\",
+			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\"
 		}
 	},
 	"jvmArgs": [

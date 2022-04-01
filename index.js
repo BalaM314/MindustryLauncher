@@ -34,6 +34,10 @@ async function askYesOrNo(query) {
 const pathSeparator = process.platform == "win32" ? "\\" : "/";
 process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
 let parsedArgs = parseArgs(process.argv.slice(2));
+let vars = {
+    filePath: "AMOGUS",
+    jarName: "SUS"
+};
 if (parsedArgs["help"]) {
     console.log(`Usage: mindustry [--install] [--help] [--version <version>]
 --help\tDisplays this help message and exits.
@@ -182,19 +186,11 @@ async function handleDownload() {
     }
 }
 function main(recursive) {
-    settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
-    for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
-        if (jarName.includes(" ")) {
-            throw new Error(`Jar name for version ${version} contains a space.`);
-        }
-    }
-    let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"]}.jar`;
-    let filePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
     try {
-        fs.accessSync(filePath, fs.constants.R_OK);
+        fs.accessSync(vars.filePath, fs.constants.R_OK);
     }
     catch (err) {
-        console.error(`Unable to access file ${jarName}.`);
+        console.error(`Unable to access file ${vars.jarName}.`);
         if (recursive) {
             console.error("Wait what? I just downloaded that.");
             console.error("Please contact BalaM314 by filing an issue on Github.");
@@ -206,12 +202,12 @@ function main(recursive) {
         return;
     }
     console.log(`Launching Mindustry version ${parsedArgs["version"]}`);
-    mindustryProcess = startProcess(filePath, settings.jvmArgs);
+    mindustryProcess = startProcess(vars.filePath, settings.jvmArgs);
     process.stdin.on("data", (data) => {
         switch (data.toString("utf-8").slice(0, -2)) {
             case "rs":
             case "restart":
-                restart(filePath, settings.jvmArgs);
+                restart(vars.filePath, settings.jvmArgs);
                 break;
             default:
                 console.log("Unknown command.");
@@ -232,9 +228,63 @@ function main(recursive) {
             console.log(`File change detected! (${file})`);
             copyMods();
             if (settings.restartAutomaticallyOnModUpdate)
-                restart(filePath, settings.jvmArgs);
+                restart(vars.filePath, settings.jvmArgs);
         });
     }
 }
-if (!parsedArgs["install"])
-    main();
+function init() {
+    settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+    for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
+        if (jarName.includes(" ")) {
+            throw new Error(`Jar name for version ${version} contains a space.`);
+        }
+    }
+    vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"]}.jar`;
+    vars.filePath = vars.jarName.match(/[/\\]/gi) ? vars.jarName : settings.mindustryJars.folderPath + vars.jarName;
+}
+init();
+if (vars.filePath.match(/[/\\]$/i)) {
+    if (parsedArgs["compile"]) {
+        try {
+            fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
+        }
+        catch (err) {
+            console.error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+            process.exit(1);
+        }
+        console.log("Compiling...");
+        let gradleProcess = (0, child_process_1.spawn)(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
+            cwd: vars.filePath
+        });
+        gradleProcess.stdout.pipe(process.stdout);
+        gradleProcess.stderr.pipe(process.stderr);
+        gradleProcess.on("exit", (code) => {
+            if (code == 0) {
+                console.log("Compiled succesfully.");
+                vars.jarName = "Mindustry.jar";
+                vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                main();
+            }
+            else {
+                console.log("Compiling failed.");
+                process.exit(1);
+            }
+        });
+    }
+    else {
+        try {
+            fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
+        }
+        catch (err) {
+            console.error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+            process.exit(1);
+        }
+        vars.jarName = "Mindustry.jar";
+        vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+        main();
+    }
+}
+else {
+    if (!parsedArgs["install"])
+        main();
+}
