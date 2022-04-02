@@ -40,7 +40,9 @@ process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparato
 
 let parsedArgs: {
 	[index: string]: string;
-} = parseArgs(process.argv.slice(2));
+};
+let mindustryArgs: string[];
+[parsedArgs, mindustryArgs] = parseArgs(process.argv.slice(2));
 
 let vars: {
 	filePath: string;
@@ -52,10 +54,12 @@ let vars: {
 
 if(parsedArgs["help"]){
 	console.log(
-`Usage: mindustry [--install] [--help] [--version <version>]
+`Usage: mindustry [--install] [--help] [--version <version>] [--compile] [-- jvmArgs]
 --help\tDisplays this help message and exits.
 --version\tSpecifies the version to use.
---install\t[WIP] Installs the launcher. Or tries to.`
+--install\t[WIP] Installs the launcher. Or tries to.
+--compile\tCompiles before launching, only works if the version points to a source directory.
+--\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`
 	);
 	process.exit();
 }
@@ -119,6 +123,7 @@ interface Settings {
 		}
 	};
 	jvmArgs: string[];
+	processArgs: string[];
 	externalMods: string[];
 	restartAutomaticallyOnModUpdate: boolean;
 	logging: {
@@ -134,12 +139,22 @@ let currentLogStream:fs.WriteStream;
 
 
 
-function parseArgs(args: string[]){
+function parseArgs(args: string[]): [{[index: string]: string;}, string[]]{
 	let parsedArgs: {
 		[index: string]: string;
 	} = {};
 	let argName:string = "null";
+	let mindustryArgs = [];
+	let mode = 0;
 	for (let arg of args) {
+		if(arg == "--"){
+			//The remaining args need to be sent to the JVM.
+			mode = 1;
+			continue;
+		}
+		if(mode == 1){
+			mindustryArgs.push(arg);
+		}
 		if(arg.startsWith("--")){
 			argName = arg.slice(2);
 			parsedArgs[arg.toLowerCase().slice(2)] = "null";
@@ -148,12 +163,12 @@ function parseArgs(args: string[]){
 			argName = "null";
 		}
 	}
-	return parsedArgs;
+	return [parsedArgs, mindustryArgs];
 }
 
-function startProcess(_filePath: string, _jvmArgs: string[]){
+function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: string[]){
 	copyMods();
-	const proc = spawn("java", [`-jar ${_filePath}`].concat(_jvmArgs).join(" ").split(" "));
+	const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
 	const d = new Date();
 	if(settings.logging.enabled){
 		currentLogStream = fs.createWriteStream(
@@ -170,7 +185,7 @@ function restart(_filePath: string, _jvmArgs: string[]){
 	console.log("Restarting!");
 	mindustryProcess.removeAllListeners();
 	mindustryProcess.kill("SIGTERM");//todo see if this causes issues
-	mindustryProcess = startProcess(_filePath, _jvmArgs);
+	mindustryProcess = startProcess(_filePath, _jvmArgs, mindustryArgs);
 	console.log("Started new process.");
 }
 
@@ -248,8 +263,11 @@ function main(recursive?:boolean){
 	}
 	
 	console.log(`Launching Mindustry version ${parsedArgs["version"]}`);
+	if(mindustryArgs.length > 0){
+		console.log(`Arguments: ${mindustryArgs}`);
+	}
 
-	mindustryProcess = startProcess(vars.filePath, settings.jvmArgs);
+	mindustryProcess = startProcess(vars.filePath, settings.jvmArgs, mindustryArgs);
 
 	process.stdin.on("data", (data) => {
 		switch(data.toString("utf-8").slice(0, -2)){

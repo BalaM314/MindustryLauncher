@@ -9,7 +9,10 @@
 			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
 			//Format: "theVersionNameYouType": "theFileName.jar",
 			//To launch theFileName.jar, you would choose version theVersionNameYouType.
-			// "src": "C:\\Mindustry\\src\\Mindustry\\desktop\\build\\libs\\Mindustry.jar"
+			// "wack": "C:\\someWeirdPath\\fileName.jar"
+			//You can also point it to a Mindustry source directory, like this:
+			// "src": "C:\\Mindustry\\src\\Mindustry\\"
+			//and if you specify the --compile flag it'll compile for you.
 		}
 	},
 	"jvmArgs": [
@@ -19,6 +22,9 @@
 		//Memory allocation, minimum 1G and maximum 2G.
 		"-Xmx2G",
 		"-Xms1G"
+	],
+	"processArgs": [
+		//List of args to pass to the actual process. Not sure why you would want this.
 	],
 	"externalMods": [
 		//List of external mods to copy into the mods folder automatically when the file changes.
