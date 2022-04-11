@@ -9,6 +9,7 @@ A custom launcher for Mindustry built with TypeScript and Node.JS.
 * [x] Relaunch on command
 * [x] Highly configurable
 * [x] Open source
+* [x] Optionally compile before launching
 
 ## Installation
 
@@ -27,4 +28,4 @@ better installation coming soon
 ## Usage
 CLI only.
 
-`mindustry [--help] [--install] [--version <version>]`
+`mindustry [--help] [--install] [--version <version>] [--compile]`
