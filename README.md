@@ -28,4 +28,4 @@ better installation coming soon
 ## Usage
 CLI only.
 
-`mindustry [--help] [--install] [--version <version>] [--compile]`
+`mindustry [--help] [--install] [--version <version>] [--compile] [-- jvmArgs...]`
