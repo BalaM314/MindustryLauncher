@@ -2,7 +2,7 @@
 	"mindustryJars": {
 		"folderPath": "C:\\Bala\\Mindustry\\versions\\",
 		"customVersionNames": {
-			"foo": "C:\\Bala\\Mindustry\\src\\mindustry-client\\",
+			"foo+": "C:\\Bala\\Mindustry\\src\\mindustry-client\\",
 			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\"
 		}
 	},

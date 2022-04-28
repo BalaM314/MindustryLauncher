@@ -16,6 +16,7 @@ import * as fs from "fs";
 import { spawn, exec, ChildProcess } from "child_process";
 import * as readline from "readline";
 import * as https from "https";
+import { Stream, TransformCallback } from "stream";
 
 function askQuestion(query:string): Promise<string> {
 	const rl = readline.createInterface({
@@ -170,14 +171,20 @@ function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: str
 	copyMods();
 	const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
 	const d = new Date();
+	class AddTimeTransform extends Stream.Transform {
+		_transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
+			callback(null, `[${new Date().toTimeString().split(" ")[0]}] ${chunk}`);
+		}
+	}
+	
 	if(settings.logging.enabled){
 		currentLogStream = fs.createWriteStream(
 			`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
 		);
-		proc.stdout.pipe(currentLogStream);
+		proc.stdout.pipe(new AddTimeTransform()).pipe(currentLogStream);
 	}
-	proc.stdout.pipe(process.stdout);
-	proc.stderr.pipe(process.stderr);
+	proc.stdout.pipe(new AddTimeTransform()).pipe(process.stdout);
+	proc.stderr.pipe(new AddTimeTransform()).pipe(process.stderr);
 	return proc;
 }
 

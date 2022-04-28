@@ -17,6 +17,7 @@ const fs = require("fs");
 const child_process_1 = require("child_process");
 const readline = require("readline");
 const https = require("https");
+const stream_1 = require("stream");
 function askQuestion(query) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -130,12 +131,17 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     copyMods();
     const proc = (0, child_process_1.spawn)("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
     const d = new Date();
+    class AddTimeTransform extends stream_1.Stream.Transform {
+        _transform(chunk, encoding, callback) {
+            callback(null, `[${new Date().toTimeString().split(" ")[0]}] ${chunk}`);
+        }
+    }
     if (settings.logging.enabled) {
         currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
-        proc.stdout.pipe(currentLogStream);
+        proc.stdout.pipe(new AddTimeTransform()).pipe(currentLogStream);
     }
-    proc.stdout.pipe(process.stdout);
-    proc.stderr.pipe(process.stderr);
+    proc.stdout.pipe(new AddTimeTransform()).pipe(process.stdout);
+    proc.stderr.pipe(new AddTimeTransform()).pipe(process.stderr);
     return proc;
 }
 function restart(_filePath, _jvmArgs) {
