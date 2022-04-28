@@ -20,8 +20,8 @@ import { Stream, TransformCallback } from "stream";
 
 function askQuestion(query:string): Promise<string> {
 	const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout,
+		input: process.stdin,
+		output: process.stdout,
 	});
 
 	return new Promise(resolve => rl.question(query, ans => {
@@ -37,6 +37,7 @@ async function askYesOrNo(query:string): Promise<boolean> {
 
 const pathSeparator = process.platform == "win32" ? "\\" : "/";
 
+//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
 
 let parsedArgs: {
@@ -87,6 +88,8 @@ if(parsedArgs["install"]){
 
 async function install(){
 	console.log("Trying to install.");
+	//questionable semiautomatic install script
+	
 	if(/downloads/i.test(process.cwd())){
 		console.error("ew why am I in a downloads directory please move me");
 		process.exit(1);
@@ -111,6 +114,8 @@ async function install(){
 	
 	if(await askYesOrNo("The config.json file contains this program's settings. Open it? [y/n]")){
 		exec("notepad config.json");
+		//this doesnt work for some reason probably because async and process.ext
+		//todo fix
 	}
 	return true;
 }
@@ -141,6 +146,8 @@ let currentLogStream:fs.WriteStream;
 
 
 function parseArgs(args: string[]): [{[index: string]: string;}, string[]]{
+	//Parses arguments into a useable format.
+	
 	let parsedArgs: {
 		[index: string]: string;
 	} = {};
@@ -181,6 +188,7 @@ function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: str
 		currentLogStream = fs.createWriteStream(
 			`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
 		);
+		//Creates a write stream and pipes the output of the mindustry process into it.
 		proc.stdout.pipe(new AddTimeTransform()).pipe(currentLogStream);
 	}
 	proc.stdout.pipe(new AddTimeTransform()).pipe(process.stdout);
@@ -210,9 +218,12 @@ function copyMods(){
 function parseJSONC(data:string):Settings {
 	return JSON.parse(data.split("\n")
 		.filter(line => !/^[ \t]*\/\//.test(line))
+		//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
+		.map(line => line.replace(/\*.*?\*/g, ""))
+		//Removes "multiline" comments.
 		.join("\n")
 	);
-	//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
+	
 }
 
 function downloadFile(version:string){
@@ -277,7 +288,7 @@ function main(recursive?:boolean){
 	mindustryProcess = startProcess(vars.filePath, settings.jvmArgs, mindustryArgs);
 
 	process.stdin.on("data", (data) => {
-		switch(data.toString("utf-8").slice(0, -2)){
+		switch(data.toString("utf-8").slice(0, -2)){//Input minus the \r\n at the end.
 			case "rs": case "restart":
 				restart(vars.filePath, settings.jvmArgs);
 			break;
@@ -317,7 +328,9 @@ function init(){
 	}
 
 	vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"]}.jar`;
+	//Use the custom version name, but if it doesnt exist use "v${version}.jar";
 	vars.filePath = vars.jarName.match(/[/\\]/gi) ? vars.jarName : settings.mindustryJars.folderPath + vars.jarName;
+	//If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
 }
 
 init();
