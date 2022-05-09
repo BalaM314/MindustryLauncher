@@ -333,8 +333,12 @@ ${err.stderr.toString()}`);
         catch (err) {
             let errorMessage = err.stderr.toString();
             let outputMessage = err.stdout.toString();
-            if (errorMessage.includes("commit your changes")) {
-                askYesOrNo("Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:")
+            if (outputMessage.includes("Merge conflict")) {
+                (0, child_process_1.execSync)("git merge --abort");
+                reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
+            }
+            else if (errorMessage.includes("commit your changes")) {
+                askYesOrNo(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:`)
                     .then(response => {
                     if (response) {
                         try {
@@ -350,10 +354,6 @@ ${err.stderr.toString()}`);
                         resolve(1);
                     }
                 });
-            }
-            else if (outputMessage.includes("Merge conflict")) {
-                (0, child_process_1.execSync)("git merge --abort");
-                reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
             }
             else {
                 fatalError(err);
