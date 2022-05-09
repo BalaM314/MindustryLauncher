@@ -1,23 +1,40 @@
 {
+	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
+	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
-		"folderPath": "C:\\Bala\\Mindustry\\versions\\",
+		//Set this to a folder containing the .jar files for each version.
+		//Example: "folderPath": "C:\\Mindustry\\versions\\"
+		"folderPath": "C:\\Mindustry\\Versions\\",
 		"customVersionNames": {
-			"foo+": "C:\\Bala\\Mindustry\\src\\mindustry-client\\",
-			"src": "C:\\Bala\\Mindustry\\src\\Mindustry\\"
+			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
+			//Format: "theVersionNameYouType": "theFileName.jar",
+			//To launch theFileName.jar, you would choose version theVersionNameYouType.
+			// "wack": "C:\\someWeirdPath\\fileName.jar"
+			//You can also point it to a Mindustry source directory, like this:
+			// "src": "C:\\Mindustry\\src\\Mindustry\\"
+			//and if you specify the --compile flag it'll compile for you.
 		}
 	},
 	"jvmArgs": [
+		//JVM arguments, don't touch if you don't understand.
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
 		"-XX:+ShowCodeDetailsInExceptionMessages",
+		//Memory allocation, minimum 1G and maximum 2G.
 		"-Xmx2G",
 		"-Xms1G"
 	],
+	"processArgs": [
+		//List of args to pass to the actual process. Not sure why you would want this.
+	],
 	"externalMods": [
-		"C:\\Bala\\Mindustry\\mods\\thaumic-industries\\build\\libs\\thaumic-industriesDesktop.jar"
+		//List of external mods to copy into the mods folder automatically when the file changes.
 	],
 	"restartAutomaticallyOnModUpdate": true,
 	"logging": {
-		"path": "C:\\Bala\\Mindustry\\logs\\",
-		"enabled": true
+		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
+		"path": "C:\\Mindustry\\logs\\",
+		"enabled": false,
+		//Removes your (windows)username from logs. Useful if it's your IRL name and you don't want it to show up in screenshots.
+		"removeUsername": true
 	}
 }

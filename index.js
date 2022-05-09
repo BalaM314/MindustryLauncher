@@ -114,65 +114,12 @@ let vars = {
     jarName: "SUS"
 };
 if ("help" in parsedArgs) {
-    console.log(`Usage: mindustry [--install] [--help] [--version <version>] [--compile] [-- jvmArgs]
+    console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
 --help\tDisplays this help message and exits.
 --version\tSpecifies the version to use.
---install\t[WIP] Installs the launcher. Or tries to.
 --compile\tCompiles before launching, only works if the version points to a source directory.
 --\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`);
     process.exit();
-}
-if ("install" in parsedArgs) {
-    install()
-        .then(() => {
-        console.log("Installation completed!");
-    })
-        .catch((err) => {
-        console.log("Installation failed: " + err.message);
-        process.exit(1);
-    });
-}
-else {
-    try {
-        fs.accessSync("config.json", fs.constants.R_OK);
-    }
-    catch (err) {
-        error("Can't find the config.json file!");
-        error("You may need to create one, try running again with --install.");
-        process.exit(1);
-    }
-}
-async function install() {
-    console.log("Trying to install.");
-    //questionable semiautomatic install script
-    if (/downloads/i.test(process.cwd())) {
-        console.error("ew why am I in a downloads directory please move me");
-        process.exit(1);
-    }
-    if (!await askYesOrNo(`You want to install to ${process.cwd()}, right? [y/n]`))
-        throw new Error("Installation aborted.");
-    console.log("Installing...");
-    try {
-        fs.accessSync("config.json", fs.constants.R_OK);
-        console.log("config.json file found.");
-    }
-    catch (err) {
-        console.log("Creating a config.json file...");
-        try {
-            fs.copyFileSync("template-config.json", "config.json");
-            console.log("Done.");
-        }
-        catch (err) {
-            console.error("Failed to create config.json file! " + err?.message);
-            process.exit(1);
-        }
-    }
-    if (await askYesOrNo("The config.json file contains this program's settings. Open it? [y/n]")) {
-        (0, child_process_1.exec)("notepad config.json");
-        //this doesnt work for some reason probably because async and process.ext
-        //todo fix
-    }
-    return true;
 }
 let settings;
 let mindustryProcess;
@@ -417,6 +364,5 @@ if (vars.filePath.match(/[/\\]$/i)) {
     }
 }
 else {
-    if (!parsedArgs["install"])
-        main();
+    main();
 }
