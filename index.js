@@ -106,21 +106,12 @@ async function askYesOrNo(query) {
     return response == "y" || response == "yes";
 }
 const pathSeparator = process.platform == "win32" ? "\\" : "/";
-//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
-process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
-let [parsedArgs, mindustryArgs] = parseArgs(process.argv.slice(2));
+let parsedArgs;
+let mindustryArgs;
 let vars = {
     filePath: "AMOGUS",
     jarName: "SUS"
 };
-if ("help" in parsedArgs) {
-    console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
---help\tDisplays this help message and exits.
---version\tSpecifies the version to use.
---compile\tCompiles before launching, only works if the version points to a source directory.
---\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`);
-    process.exit();
-}
 let settings;
 let mindustryProcess;
 let currentLogStream;
@@ -241,7 +232,7 @@ async function handleDownload() {
             log("There's no status bar so you just have to trust me.");
             await downloadFile("v" + parsedArgs["version"]);
             log("Done!");
-            main(true);
+            launch(true);
         }
         catch (err) {
             error("An error occured while downloading the file: ");
@@ -250,7 +241,7 @@ async function handleDownload() {
         return;
     }
 }
-function main(recursive) {
+function launch(recursive) {
     try {
         fs.accessSync(vars.filePath, fs.constants.R_OK);
     }
@@ -321,48 +312,68 @@ function init() {
     vars.filePath = vars.jarName.match(/[/\\]/gi) ? vars.jarName : settings.mindustryJars.folderPath + vars.jarName;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
 }
-init();
-if (vars.filePath.match(/[/\\]$/i)) {
-    if ("compile" in parsedArgs) {
-        try {
-            fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
-        }
-        catch (err) {
-            error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
-            process.exit(1);
-        }
-        log("Compiling...");
-        let gradleProcess = (0, child_process_1.spawn)(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
-            cwd: vars.filePath
-        });
-        gradleProcess.stdout.pipe(process.stdout);
-        gradleProcess.stderr.pipe(process.stderr);
-        gradleProcess.on("exit", (code) => {
-            if (code == 0) {
-                log("Compiled succesfully.");
-                vars.jarName = "Mindustry.jar";
-                vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
-                main();
+function main(processArgs) {
+    //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
+    process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
+    [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
+    init();
+    if ("help" in parsedArgs) {
+        console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
+	--help\tDisplays this help message and exits.
+	--version\tSpecifies the version to use.
+	--compile\tCompiles before launching, only works if the version points to a source directory.
+	--\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`);
+        process.exit();
+    }
+    if (vars.filePath.match(/[/\\]$/i)) {
+        if ("compile" in parsedArgs) {
+            try {
+                fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
             }
-            else {
-                error("Compiling failed.");
+            catch (err) {
+                error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
                 process.exit(1);
             }
-        });
+            log("Compiling...");
+            let gradleProcess = (0, child_process_1.spawn)(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
+                cwd: vars.filePath
+            });
+            gradleProcess.stdout.pipe(process.stdout);
+            gradleProcess.stderr.pipe(process.stderr);
+            gradleProcess.on("exit", (code) => {
+                if (code == 0) {
+                    log("Compiled succesfully.");
+                    vars.jarName = "Mindustry.jar";
+                    vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                    launch();
+                }
+                else {
+                    error("Compiling failed.");
+                    process.exit(1);
+                }
+            });
+        }
+        else {
+            try {
+                fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
+            }
+            catch (err) {
+                error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+                process.exit(1);
+            }
+            vars.jarName = "Mindustry.jar";
+            vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+            launch();
+        }
     }
     else {
-        try {
-            fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
-        }
-        catch (err) {
-            error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
-            process.exit(1);
-        }
-        vars.jarName = "Mindustry.jar";
-        vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
-        main();
+        launch();
     }
 }
-else {
-    main();
+try {
+    main(process.argv);
+}
+catch (err) {
+    error("Unhandled runtime error!");
+    throw err;
 }
