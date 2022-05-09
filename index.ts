@@ -13,12 +13,11 @@
  */
 
 import * as fs from "fs";
-import { spawn, exec, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execSync, SpawnSyncReturns } from "child_process";
 import * as readline from "readline";
 import * as https from "https";
 import { Stream, TransformCallback, TransformOptions } from "stream";
 
-type Color = "red" | "yellow" | "green" | "blue" | "purple" | "white" | "gray" | "black" | "cyan" | "reset";
 
 const ANSIEscape = {
 	"red": `\u001b[0;31m`,
@@ -361,15 +360,64 @@ function init(){
 		}
 	}
 
-	vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"]}.jar`;
+	vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
 	//Use the custom version name, but if it doesnt exist use "v${version}.jar";
 	vars.filePath = vars.jarName.match(/[/\\]/gi) ? vars.jarName : settings.mindustryJars.folderPath + vars.jarName;
 	//If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
 }
 
-function main(processArgs:typeof process.argv){
+function updateLauncher():Promise<number>{ return new Promise((resolve, reject) => {
+	function fatalError(err:SpawnSyncReturns<Buffer>){
+		reject(
+`A command failed to complete. Output:
+${err.stderr.toString()}`
+		);
+	}
+	function commitChanges(){
+		execSync("git add .");
+		execSync(`git commit -m "[MindustryLauncher] Automated commit: update"`);
+	}
+	function pull(){
+		execSync("git pull dev main");
+	}
+
+
+	log("Updating...");
+	try {
+		pull();
+		resolve(0);
+	} catch(err){
+		let errorMessage = (err as SpawnSyncReturns<Buffer>).stderr.toString();
+		if(errorMessage.includes("commit your changes")){
+			askYesOrNo("Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes.")
+			.then(response => {
+				if(response){
+					try {
+						commitChanges();
+						pull();
+						resolve(0);
+					} catch(err){fatalError(err as SpawnSyncReturns<Buffer>)}
+				} else {
+					resolve(1);
+				}
+			});
+
+		} else if(errorMessage.includes("merge conflict")){
+			execSync("git merge --abort");
+			reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
+		} else {
+			fatalError(err as SpawnSyncReturns<Buffer>)
+		}
+	}
+
+	reject("Unreachable code reached.");
+	});
+};
+
+function main(processArgs:typeof process.argv):number {
 	//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 	process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
+	
 	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
 
 	init();
@@ -377,12 +425,26 @@ function main(processArgs:typeof process.argv){
 	if("help" in parsedArgs){
 		console.log(
 	`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
+
 	--help\tDisplays this help message and exits.
 	--version\tSpecifies the version to use.
 	--compile\tCompiles before launching, only works if the version points to a source directory.
-	--\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`
+	--\t\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`
 		);
-		process.exit();
+		return 0;
+	}
+
+	if("update" in parsedArgs){
+		updateLauncher()
+			.then(message => {switch(message){
+				case 0: log("Successfully updated."); break;
+				case 1: log("Update aborted."); break;
+			}})
+			.catch((err:string) => {
+				error("Update failed due to an error!");
+				error(err);
+			});
+		return 0;
 	}
 
 	if(vars.filePath.match(/[/\\]$/i)){
@@ -391,7 +453,7 @@ function main(processArgs:typeof process.argv){
 				fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
 			} catch(err){
 				error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
-				process.exit(1);
+				return 1;
 			}
 			log("Compiling...");
 			let gradleProcess = spawn(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
@@ -416,7 +478,7 @@ function main(processArgs:typeof process.argv){
 				fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
 			} catch(err){
 				error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
-				process.exit(1);
+				return 1;
 			}
 			vars.jarName = "Mindustry.jar";
 			vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
@@ -426,6 +488,7 @@ function main(processArgs:typeof process.argv){
 	} else {
 		launch();
 	}
+	return 0;
 }
 try {
 	main(process.argv);
