@@ -333,7 +333,7 @@ ${err.stderr.toString()}`);
         catch (err) {
             let errorMessage = err.stderr.toString();
             if (errorMessage.includes("commit your changes")) {
-                askYesOrNo("Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes.")
+                askYesOrNo("Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:")
                     .then(response => {
                     if (response) {
                         try {
@@ -358,7 +358,6 @@ ${err.stderr.toString()}`);
                 fatalError(err);
             }
         }
-        reject("Unreachable code reached.");
     });
 }
 ;
