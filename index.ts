@@ -40,6 +40,61 @@ function error(message: string){
 	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
 
+function getLogHighlight(char:string){
+	switch(char){
+		case "I":
+			return ANSIEscape.white;
+		case "D":
+			return ANSIEscape.gray;
+		case "W":
+			return ANSIEscape.yellow;
+		case "E":
+			return ANSIEscape.red;
+		default:
+			return ANSIEscape.white;
+	}
+}
+function getTimeComponent(highlighted:boolean){
+	if(highlighted)
+		return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]${ANSIEscape.reset}`;
+	else
+		return `[${new Date().toTimeString().split(" ")[0]}]`;
+}
+function formatLine(line:string){
+	return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
+}
+function formatText(text:string){
+	return text.split(/\r?\n/)
+	.slice(0, -1)
+	.map((line, index) => 	
+		(line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n"
+	)
+	.join("")
+	+ ANSIEscape.reset;
+}
+class LoggerHighlightTransform extends Stream.Transform {
+	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+		callback(null, formatText(chunk.toString()));
+	}
+}
+class AddTimeTransform extends Stream.Transform {
+	constructor(public highlight:boolean, opts?:TransformOptions){
+		super(opts);
+	}
+	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+		callback(null, `${getTimeComponent(this.highlight)} ${chunk.toString()}${this.highlight ? ANSIEscape.reset : ""}`);
+	}
+}
+/**Removes a word from logs. Useful to hide your Windows username.*/
+class CensorKeywordTransform extends Stream.Transform {
+	constructor(public keyword:string, public replace:string, opts?:TransformOptions){
+		super(opts);
+	}
+	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+		callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
+	}
+}
+
 function askQuestion(query:string): Promise<string> {
 	const rl = readline.createInterface({
 		input: process.stdin,
@@ -153,6 +208,7 @@ interface Settings {
 	logging: {
 		path: string;
 		enabled: boolean;
+		removeUsername: boolean;
 	};
 }
 
@@ -194,51 +250,6 @@ function parseArgs(args: string[]): [parsedArgs: {[index: string]: string;}, min
 
 function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: string[]){
 	copyMods();
-	function getLogHighlight(char:string){
-		switch(char){
-			case "I":
-				return ANSIEscape.white;
-			case "D":
-				return ANSIEscape.gray;
-			case "W":
-				return ANSIEscape.yellow;
-			case "E":
-				return ANSIEscape.red;
-			default:
-				return ANSIEscape.white;
-		}
-	}
-	function getTimeComponent(highlighted:boolean){
-		if(highlighted)
-			return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]${ANSIEscape.reset}`;
-		else
-			return `[${new Date().toTimeString().split(" ")[0]}]`;
-	}
-	function formatLine(line:string){
-		return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
-	}
-	function formatText(text:string){
-		return text.split(/\r?\n/)
-		.slice(0, -1)
-		.map((line, index) => 	
-			(line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n"
-		)
-		.join("")
-		+ ANSIEscape.reset;
-	}
-	class LoggerHighlightTransform extends Stream.Transform {
-		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-			callback(null, formatText(chunk.toString()));
-		}
-	}
-	class AddTimeTransform extends Stream.Transform {
-		constructor(public highlight:boolean, opts?:TransformOptions){
-			super(opts);
-		}
-		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-			callback(null, `${getTimeComponent(this.highlight)} ${chunk.toString()}${this.highlight ? ANSIEscape.reset : ""}`);
-		}
-	}
 	const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
 	const d = new Date();
 
@@ -247,10 +258,34 @@ function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: str
 			`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
 		);
 		//Creates a write stream and pipes the output of the mindustry process into it.
-		proc.stdout.pipe(new AddTimeTransform(false)).pipe(currentLogStream);
+		if(settings.logging.removeUsername)
+			proc.stdout
+				.pipe(new AddTimeTransform(false))
+				.pipe(new CensorKeywordTransform(process.env["USERNAME"]!, "[USERNAME]"))
+				.pipe(currentLogStream);
+		else
+			proc.stdout
+				.pipe(new AddTimeTransform(false))
+				.pipe(currentLogStream);
 	}
-	proc.stdout.pipe(new LoggerHighlightTransform()).pipe(process.stdout);
-	proc.stderr.pipe(new LoggerHighlightTransform()).pipe(process.stderr);
+	if(settings.logging.removeUsername){
+		proc.stdout
+			.pipe(new LoggerHighlightTransform())
+			.pipe(new CensorKeywordTransform(process.env["USERNAME"]!, "[USERNAME]"))
+			.pipe(process.stdout);
+		proc.stderr
+			.pipe(new LoggerHighlightTransform())
+			.pipe(new CensorKeywordTransform(process.env["USERNAME"]!, "[USERNAME]"))
+			.pipe(process.stderr);
+	} else {
+		proc.stdout
+			.pipe(new LoggerHighlightTransform())
+			.pipe(process.stdout);
+		proc.stderr
+			.pipe(new LoggerHighlightTransform())
+			.pipe(process.stderr);
+	}
+	
 	return proc;
 }
 
