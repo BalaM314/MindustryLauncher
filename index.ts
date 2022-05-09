@@ -16,7 +16,14 @@ import * as fs from "fs";
 import { spawn, exec, ChildProcess } from "child_process";
 import * as readline from "readline";
 import * as https from "https";
-import { Stream, TransformCallback } from "stream";
+import { Stream, TransformCallback, TransformOptions } from "stream";
+
+function log(message: string){
+	console.log(`\u001b[0;36m[Launcher]\u001b[0m ${message}`);
+}
+function error(message: string){
+	console.error(`\u001b[0;36m[Launcher]\u001b[0;31m ${message}`);
+}
 
 function askQuestion(query:string): Promise<string> {
 	const rl = readline.createInterface({
@@ -40,11 +47,7 @@ const pathSeparator = process.platform == "win32" ? "\\" : "/";
 //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
 
-let parsedArgs: {
-	[index: string]: string;
-};
-let mindustryArgs: string[];
-[parsedArgs, mindustryArgs] = parseArgs(process.argv.slice(2));
+let [parsedArgs, mindustryArgs] = parseArgs(process.argv.slice(2));
 
 let vars: {
 	filePath: string;
@@ -54,7 +57,7 @@ let vars: {
 	jarName: "SUS"
 };
 
-if(parsedArgs["help"]){
+if("help" in parsedArgs){
 	console.log(
 `Usage: mindustry [--install] [--help] [--version <version>] [--compile] [-- jvmArgs]
 --help\tDisplays this help message and exits.
@@ -66,7 +69,7 @@ if(parsedArgs["help"]){
 	process.exit();
 }
 
-if(parsedArgs["install"]){
+if("install" in parsedArgs){
 	install()
 		.then(() => {
 			console.log("Installation completed!");
@@ -79,8 +82,8 @@ if(parsedArgs["install"]){
 	try {
 		fs.accessSync("config.json", fs.constants.R_OK);
 	} catch(err) {
-		console.error("Can't find the config.json file!");
-		console.error("You may need to create one, try running again with --install.");
+		error("Can't find the config.json file!");
+		error("You may need to create one, try running again with --install.");
 		process.exit(1);
 	}
 }
@@ -145,7 +148,7 @@ let currentLogStream:fs.WriteStream;
 
 
 
-function parseArgs(args: string[]): [{[index: string]: string;}, string[]]{
+function parseArgs(args: string[]): [parsedArgs: {[index: string]: string;}, mindustryArgs: string[]]{
 	//Parses arguments into a useable format.
 	
 	let parsedArgs: {
@@ -176,37 +179,79 @@ function parseArgs(args: string[]): [{[index: string]: string;}, string[]]{
 
 function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: string[]){
 	copyMods();
-	const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
-	const d = new Date();
-	class AddTimeTransform extends Stream.Transform {
-		_transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
-			callback(null, `[${new Date().toTimeString().split(" ")[0]}] ${chunk}`);
+	function getLogHighlight(char:string){
+		switch(char){
+			case "I":
+				return "\u001b[0;37m";
+			case "D":
+				return "\u001b[0;90m";
+			case "W":
+				return "\u001b[0;93m";
+			case "E":
+				return "\u001b[0;91m";
+			case "":
+				return "\u001b[0m";
+			default:
+				return "\u001b[0;37m";
 		}
 	}
-	
+	function getTimeComponent(highlighted:boolean){
+		if(highlighted)
+			return `\u001b[0;36m[${new Date().toTimeString().split(" ")[0]}]\u001b[0m`;
+		else
+			return `[${new Date().toTimeString().split(" ")[0]}]`;
+	}
+	function formatLine(line:string){
+		return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
+	}
+	function formatText(text:string){
+		return text.split(/\r?\n/)
+		.slice(0, -1)
+		.map((line, index) => 	
+			(line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n"
+		)
+		.join("")
+		+ getLogHighlight("");
+	}
+	class LoggerHighlightTransform extends Stream.Transform {
+		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+			callback(null, formatText(chunk.toString()));
+		}
+	}
+	class AddTimeTransform extends Stream.Transform {
+		constructor(public highlight:boolean, opts?:TransformOptions){
+			super(opts);
+		}
+		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+			callback(null, `${getTimeComponent(this.highlight)} ${chunk.toString()}${this.highlight ? getLogHighlight("") : ""}`);
+		}
+	}
+	const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
+	const d = new Date();
+
 	if(settings.logging.enabled){
 		currentLogStream = fs.createWriteStream(
 			`${settings.logging.path}${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
 		);
 		//Creates a write stream and pipes the output of the mindustry process into it.
-		proc.stdout.pipe(new AddTimeTransform()).pipe(currentLogStream);
+		proc.stdout.pipe(new AddTimeTransform(false)).pipe(currentLogStream);
 	}
-	proc.stdout.pipe(new AddTimeTransform()).pipe(process.stdout);
-	proc.stderr.pipe(new AddTimeTransform()).pipe(process.stderr);
+	proc.stdout.pipe(new LoggerHighlightTransform()).pipe(process.stdout);
+	proc.stderr.pipe(new LoggerHighlightTransform()).pipe(process.stderr);
 	return proc;
 }
 
 function restart(_filePath: string, _jvmArgs: string[]){
-	console.log("Restarting!");
+	log("Restarting!");
 	mindustryProcess.removeAllListeners();
 	mindustryProcess.kill("SIGTERM");//todo see if this causes issues
 	mindustryProcess = startProcess(_filePath, _jvmArgs, mindustryArgs);
-	console.log("Started new process.");
+	log("Started new process.");
 }
 
 function copyMods(){
 	for(var file of settings.externalMods){
-		console.log(`Copying mod ${file}`);
+		log(`Copying mod ${file}`);
 		let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=(Desktop)?\.jar$)/i);//hello regex my old friend
 		if(modname == null){
 			throw new Error(`Invalid mod filename ${file}!`);
@@ -251,14 +296,14 @@ function downloadFile(version:string){
 async function handleDownload(){
 	if(await askYesOrNo("Would you like to download the file? [y/n]")){
 		try {
-			console.log("Downloading...");
-			console.log("There's no status bar so you just have to trust me.");
+			log("Downloading...");
+			log("There's no status bar so you just have to trust me.");
 			await downloadFile("v"+parsedArgs["version"]);
-			console.log("Done!");
+			log("Done!");
 			main(true);
 		} catch(err){
-			console.error("An error occured while downloading the file: ");
-			console.error(err);
+			error("An error occured while downloading the file: ");
+			error(err as any);
 		}
 		return;
 	}
@@ -269,20 +314,20 @@ function main(recursive?:boolean){
 	try {
 		fs.accessSync(vars.filePath, fs.constants.R_OK);
 	} catch(err){
-		console.error(`Unable to access file ${vars.jarName}.`);
+		error(`Unable to access file ${vars.jarName}.`);
 		if(recursive){
-			console.error("Wait what? I just downloaded that.");
-			console.error("Please contact BalaM314 by filing an issue on Github.");
+			error("Wait what? I just downloaded that.");
+			error("Please contact BalaM314 by filing an issue on Github.");
 		} else {
-			console.error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.")
+			error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.")
 			handleDownload();
 		}
 		return;
 	}
 	
-	console.log(`Launching Mindustry version ${parsedArgs["version"]}`);
+	log(`Launching Mindustry version ${parsedArgs["version"]}`);
 	if(mindustryArgs.length > 0){
-		console.log(`Arguments: ${mindustryArgs}`);
+		log(`Arguments: ${mindustryArgs}`);
 	}
 
 	mindustryProcess = startProcess(vars.filePath, settings.jvmArgs, mindustryArgs);
@@ -292,17 +337,19 @@ function main(recursive?:boolean){
 			case "rs": case "restart":
 				restart(vars.filePath, settings.jvmArgs);
 			break;
+			case "?": case "help":
+				log(`Commands: 'restart', 'help'`);
 			default:
-				console.log("Unknown command.");
+				log("Unknown command.");
 				break;
 		}
 	});
 
 	mindustryProcess.on("exit", (statusCode) => {
 		if(statusCode == 0){
-			console.log("Process exited.");
+			log("Process exited.");
 		} else {
-			console.log(`Process crashed with exit code ${statusCode}!`);
+			log(`Process crashed with exit code ${statusCode}!`);
 		}
 		process.exit();
 	});
@@ -310,7 +357,7 @@ function main(recursive?:boolean){
 
 	for(var file of settings.externalMods){
 		fs.watchFile(file, () => {
-			console.log(`File change detected! (${file})`);
+			log(`File change detected! (${file})`);
 			copyMods();
 			if(settings.restartAutomaticallyOnModUpdate)
 				restart(vars.filePath, settings.jvmArgs);
@@ -336,14 +383,14 @@ function init(){
 init();
 
 if(vars.filePath.match(/[/\\]$/i)){
-	if(parsedArgs["compile"]){
+	if("compile" in parsedArgs){
 		try {
 			fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
 		} catch(err){
-			console.error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+			error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
 			process.exit(1);
 		}
-		console.log("Compiling...");
+		log("Compiling...");
 		let gradleProcess = spawn(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
 			cwd: vars.filePath
 		});
@@ -351,12 +398,12 @@ if(vars.filePath.match(/[/\\]$/i)){
 		gradleProcess.stderr.pipe(process.stderr);
 		gradleProcess.on("exit", (code) => {
 			if(code == 0){
-				console.log("Compiled succesfully.");
+				log("Compiled succesfully.");
 				vars.jarName = "Mindustry.jar";
 				vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
 				main();
 			} else {
-				console.log("Compiling failed.");
+				error("Compiling failed.");
 				process.exit(1);
 			}
 		});
@@ -365,7 +412,7 @@ if(vars.filePath.match(/[/\\]$/i)){
 		try {
 			fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
 		} catch(err){
-			console.error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+			error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
 			process.exit(1);
 		}
 		vars.jarName = "Mindustry.jar";
