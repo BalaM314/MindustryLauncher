@@ -369,7 +369,9 @@ function init(){
 function updateLauncher():Promise<number>{ return new Promise((resolve, reject) => {
 	function fatalError(err:SpawnSyncReturns<Buffer>){
 		reject(
-`A command failed to complete. Output:
+`A command failed to complete. stdout:
+${err.stdout.toString()}
+stderr:
 ${err.stderr.toString()}`
 		);
 	}
@@ -400,7 +402,15 @@ ${err.stderr.toString()}`
 						commitChanges();
 						pull();
 						resolve(0);
-					} catch(err){fatalError(err as SpawnSyncReturns<Buffer>)}
+					} catch(err){
+						let outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
+						if(outputMessage.includes("Merge conflict")){
+							execSync("git merge --abort");
+							reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
+						} else {
+							fatalError(err as SpawnSyncReturns<Buffer>);
+						}
+					}
 				} else {
 					resolve(1);
 				}

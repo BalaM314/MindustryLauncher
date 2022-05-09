@@ -315,7 +315,9 @@ function init() {
 function updateLauncher() {
     return new Promise((resolve, reject) => {
         function fatalError(err) {
-            reject(`A command failed to complete. Output:
+            reject(`A command failed to complete. stdout:
+${err.stdout.toString()}
+stderr:
 ${err.stderr.toString()}`);
         }
         function commitChanges() {
@@ -347,7 +349,14 @@ ${err.stderr.toString()}`);
                             resolve(0);
                         }
                         catch (err) {
-                            fatalError(err);
+                            let outputMessage = err.stdout.toString();
+                            if (outputMessage.includes("Merge conflict")) {
+                                (0, child_process_1.execSync)("git merge --abort");
+                                reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
+                            }
+                            else {
+                                fatalError(err);
+                            }
                         }
                     }
                     else {
