@@ -330,7 +330,7 @@ ${err.stderr.toString()}`);
             (0, child_process_1.execSync)(`git commit -m "[MindustryLauncher] Automated commit: update"`);
         }
         function pull() {
-            (0, child_process_1.execSync)("git pull dev main");
+            (0, child_process_1.execSync)("git pull");
         }
         log("Updating...");
         try {

@@ -386,7 +386,7 @@ ${err.stderr.toString()}`
 		execSync(`git commit -m "[MindustryLauncher] Automated commit: update"`);
 	}
 	function pull(){
-		execSync("git pull dev main");
+		execSync("git pull");
 	}
 
 
