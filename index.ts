@@ -388,6 +388,7 @@ ${err.stderr.toString()}`
 		resolve(0);
 	} catch(err){
 		let errorMessage = (err as SpawnSyncReturns<Buffer>).stderr.toString();
+		let outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
 		if(errorMessage.includes("commit your changes")){
 			askYesOrNo("Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:")
 			.then(response => {
@@ -401,14 +402,14 @@ ${err.stderr.toString()}`
 					resolve(1);
 				}
 			});
-		} else if(errorMessage.includes("merge conflict")){
+		} else if(outputMessage.includes("Merge conflict")){
 			execSync("git merge --abort");
 			reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
 		} else {
 			fatalError(err as SpawnSyncReturns<Buffer>)
 		}
 	}
-	
+
 	});
 };
 
