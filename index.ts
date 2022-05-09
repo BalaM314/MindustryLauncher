@@ -362,7 +362,7 @@ function init(){
 	}
 
 	if(!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory)){
-		error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`)
+		error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
 		process.exit(1);
 	}
 
@@ -467,46 +467,50 @@ function main(processArgs:typeof process.argv):number {
 		return 0;
 	}
 
-	if(vars.filePath.match(/[/\\]$/i)){
-		if("compile" in parsedArgs){
-			try {
-				fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
-			} catch(err){
-				error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
-				return 1;
-			}
-			log("Compiling...");
-			let gradleProcess = spawn(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
-				cwd: vars.filePath
-			});
-			gradleProcess.stdout.pipe(process.stdout);
-			gradleProcess.stderr.pipe(process.stderr);
-			gradleProcess.on("exit", (code) => {
-				if(code == 0){
-					log("Compiled succesfully.");
-					vars.jarName = "Mindustry.jar";
-					vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
-					launch();
-				} else {
-					error("Compiling failed.");
-					process.exit(1);
+	if("version" in parsedArgs){
+		if(vars.filePath.match(/[/\\]$/i)){
+			if("compile" in parsedArgs){
+				try {
+					fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
+				} catch(err){
+					error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+					return 1;
 				}
-			});
+				log("Compiling...");
+				let gradleProcess = spawn(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
+					cwd: vars.filePath
+				});
+				gradleProcess.stdout.pipe(process.stdout);
+				gradleProcess.stderr.pipe(process.stderr);
+				gradleProcess.on("exit", (code) => {
+					if(code == 0){
+						log("Compiled succesfully.");
+						vars.jarName = "Mindustry.jar";
+						vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+						launch();
+					} else {
+						error("Compiling failed.");
+						process.exit(1);
+					}
+				});
+				
+			} else {
+				try {
+					fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
+				} catch(err){
+					error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+					return 1;
+				}
+				vars.jarName = "Mindustry.jar";
+				vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+				launch();
+			}
 			
 		} else {
-			try {
-				fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
-			} catch(err){
-				error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
-				return 1;
-			}
-			vars.jarName = "Mindustry.jar";
-			vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
 			launch();
 		}
-		
 	} else {
-		launch();
+		log("Please specify a version to launch.");
 	}
 	return 0;
 }
