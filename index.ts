@@ -386,6 +386,11 @@ ${err.stderr.toString()}`
 
 	log("Updating...");
 	try {
+		execSync(`${process.platform == "win32" ? "where" : "which"} git`);
+	} catch(err){
+		reject("Unable to update automatically as you do not have Git installed.");
+	}
+	try {
 		pull();
 		resolve(0);
 	} catch(err){
