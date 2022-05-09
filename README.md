@@ -1,5 +1,6 @@
 # MindustryLauncher
-A custom launcher for Mindustry built with TypeScript and Node.JS.
+A custom launcher for Mindustry built with TypeScript and Node.
+![image](https://user-images.githubusercontent.com/71201189/167357688-f3e038b4-d67e-4019-aef0-8a7e57a38669.png)
 
 ## Features
 * [x] Logging
@@ -10,6 +11,8 @@ A custom launcher for Mindustry built with TypeScript and Node.JS.
 * [x] Highly configurable
 * [x] Open source
 * [x] Optionally compile before launching
+* [x] Output highlighting
+* [x] Optionally remove username from logs
 
 ## Installation
 
