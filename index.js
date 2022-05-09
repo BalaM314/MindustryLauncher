@@ -304,8 +304,13 @@ function init() {
     settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
-            throw new Error(`Jar name for version ${version} contains a space.`);
+            error(`Jar name for version ${version} contains a space.`);
+            process.exit(1);
         }
+    }
+    if (!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory)) {
+        error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
+        process.exit(1);
     }
     vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //Use the custom version name, but if it doesnt exist use "v${version}.jar";
