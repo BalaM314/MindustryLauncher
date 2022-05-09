@@ -18,11 +18,23 @@ const child_process_1 = require("child_process");
 const readline = require("readline");
 const https = require("https");
 const stream_1 = require("stream");
+const ANSIEscape = {
+    "red": `\u001b[0;31m`,
+    "yellow": `\u001b[0;93m`,
+    "green": `\u001b[0;92m`,
+    "blue": `\u001b[0;34m`,
+    "purple": `\u001b[0;35m`,
+    "white": `\u001b[0;97m`,
+    "gray": `\u001b[0;90m`,
+    "black": `\u001b[0;30m`,
+    "cyan": `\u001b[0;36m`,
+    "reset": `\u001b[0m`
+};
 function log(message) {
-    console.log(`\u001b[0;36m[Launcher]\u001b[0m ${message}`);
+    console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
 function error(message) {
-    console.error(`\u001b[0;36m[Launcher]\u001b[0;31m ${message}`);
+    console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
 function askQuestion(query) {
     const rl = readline.createInterface({
@@ -141,22 +153,20 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     function getLogHighlight(char) {
         switch (char) {
             case "I":
-                return "\u001b[0;37m";
+                return ANSIEscape.white;
             case "D":
-                return "\u001b[0;90m";
+                return ANSIEscape.gray;
             case "W":
-                return "\u001b[0;93m";
+                return ANSIEscape.yellow;
             case "E":
-                return "\u001b[0;91m";
-            case "":
-                return "\u001b[0m";
+                return ANSIEscape.red;
             default:
-                return "\u001b[0;37m";
+                return ANSIEscape.white;
         }
     }
     function getTimeComponent(highlighted) {
         if (highlighted)
-            return `\u001b[0;36m[${new Date().toTimeString().split(" ")[0]}]\u001b[0m`;
+            return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]${ANSIEscape.reset}`;
         else
             return `[${new Date().toTimeString().split(" ")[0]}]`;
     }
@@ -168,7 +178,7 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
             .slice(0, -1)
             .map((line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n")
             .join("")
-            + getLogHighlight("");
+            + ANSIEscape.reset;
     }
     class LoggerHighlightTransform extends stream_1.Stream.Transform {
         _transform(chunk, encoding, callback) {
@@ -181,7 +191,7 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
             this.highlight = highlight;
         }
         _transform(chunk, encoding, callback) {
-            callback(null, `${getTimeComponent(this.highlight)} ${chunk.toString()}${this.highlight ? getLogHighlight("") : ""}`);
+            callback(null, `${getTimeComponent(this.highlight)} ${chunk.toString()}${this.highlight ? ANSIEscape.reset : ""}`);
         }
     }
     const proc = (0, child_process_1.spawn)("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
@@ -288,6 +298,12 @@ function main(recursive) {
             case "?":
             case "help":
                 log(`Commands: 'restart', 'help'`);
+            case "exit":
+            case "e":
+                log("Exiting...");
+                mindustryProcess.removeAllListeners();
+                mindustryProcess.kill("SIGTERM");
+                process.exit(0);
             default:
                 log("Unknown command.");
                 break;
