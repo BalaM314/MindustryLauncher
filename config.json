@@ -34,8 +34,9 @@
 		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
 		"path": "C:\\Mindustry\\logs\\",
 		"enabled": false,
-		
+
 		//Removes your (windows)username from logs. Useful if it's your IRL name and you don't want it to show up in screenshots.
 		"removeUsername": true
-	}
+	},
+	"sus": "amogus"
 }
