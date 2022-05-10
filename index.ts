@@ -66,6 +66,8 @@ function formatLine(line:string){
 /**Generates a chunk processor function from a function that processes one line at a time. */
 function chunkProcessorGenerator(processor:(line:string, index:number) => string): (text:string) => string {
 	return function(chunk:string):string {
+		if(chunk == "") return "";
+		if(chunk.match(/^\r?\n$/)) return chunk;
 		return chunk.split(/(?<=\r?\n)/)
 			.map(processor)
 			.join("")

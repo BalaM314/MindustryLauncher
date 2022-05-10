@@ -63,6 +63,10 @@ function formatLine(line) {
 /**Generates a chunk processor function from a function that processes one line at a time. */
 function chunkProcessorGenerator(processor) {
     return function (chunk) {
+        if (chunk == "")
+            return "";
+        if (chunk.match(/^\r?\n$/))
+            return chunk;
         return chunk.split(/(?<=\r?\n)/)
             .map(processor)
             .join("")
