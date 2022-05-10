@@ -65,11 +65,9 @@ function formatLine(line:string){
 }
 /**Generates a chunk processor function from a function that processes one line at a time. */
 function chunkProcessorGenerator(processor:(line:string, index:number) => string): (text:string) => string {
-	return function(text:string):string {
-		return text.split(/\r?\n/)
-			.slice(0, -1)
+	return function(chunk:string):string {
+		return chunk.split(/(?<=\r?\n)/)
 			.map(processor)
-			.map(line => line + "\n")
 			.join("")
 			+ ANSIEscape.reset;
 	}
