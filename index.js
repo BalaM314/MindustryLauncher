@@ -66,6 +66,7 @@ function chunkProcessorGenerator(processor) {
         return text.split(/\r?\n/)
             .slice(0, -1)
             .map(processor)
+            .map(line => line + "\n")
             .join("")
             + ANSIEscape.reset;
     };
@@ -82,14 +83,17 @@ function streamTransform(transformFunction) {
         }
     };
 }
-const LoggerHighlightTransform = streamTransform((line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n");
+function indentChunkProcessorGenerator(processor) {
+    return (line, index) => (line.match(/^\[\w\]/) || index == 0 ? processor(line) : `:          ${line}`);
+}
+const LoggerHighlightTransform = streamTransform(indentChunkProcessorGenerator(formatLine));
 class PrependTextTransform extends stream_1.Stream.Transform {
     constructor(getText, opts) {
         super(opts);
         this.getText = getText;
     }
     _transform(chunk, encoding, callback) {
-        callback(null, `${this.getText()} ${chunk.toString()}`);
+        callback(null, chunkProcessorGenerator((line) => `${this.getText()} ${line}`)(chunk.toString()));
     }
 }
 /**Removes a word from logs. Useful to hide your Windows username.*/

@@ -65,12 +65,13 @@ function formatLine(line:string){
 }
 /**Generates a chunk processor function from a function that processes one line at a time. */
 function chunkProcessorGenerator(processor:(line:string, index:number) => string): (text:string) => string {
-	return function(text:string){
+	return function(text:string):string {
 		return text.split(/\r?\n/)
-		.slice(0, -1)
-		.map(processor)
-		.join("")
-		+ ANSIEscape.reset;
+			.slice(0, -1)
+			.map(processor)
+			.map(line => line + "\n")
+			.join("")
+			+ ANSIEscape.reset;
 	}
 }
 
@@ -85,8 +86,11 @@ function streamTransform(transformFunction: (text:string, index:number) => strin
 		}
 	}
 }
+function indentChunkProcessorGenerator(processor:(line:string) => string): (text:string, index:number) => string {
+	return (line, index) => (line.match(/^\[\w\]/) || index == 0 ? processor(line) : `:          ${line}`);
+}
 const LoggerHighlightTransform = streamTransform(
-	(line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`) + "\n"
+	indentChunkProcessorGenerator(formatLine)
 );
 
 class PrependTextTransform extends Stream.Transform {
@@ -94,7 +98,7 @@ class PrependTextTransform extends Stream.Transform {
 		super(opts);
 	}
 	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-		callback(null, `${this.getText()} ${chunk.toString()}`);
+		callback(null, chunkProcessorGenerator((line) => `${this.getText()} ${line}`)(chunk.toString()));
 	}
 }
 /**Removes a word from logs. Useful to hide your Windows username.*/
