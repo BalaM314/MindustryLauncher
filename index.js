@@ -1,4 +1,3 @@
-"use strict";
 /******************************
  *
  * This program is free software:
@@ -12,13 +11,12 @@
  * If not, see <https://www.gnu.org/licenses/>.
  *
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs");
-const child_process_1 = require("child_process");
-const readline = require("readline");
-const https = require("https");
-const stream_1 = require("stream");
-const path = require("path");
+import * as fs from "fs";
+import { spawn, execSync } from "child_process";
+import * as readline from "readline";
+import * as https from "https";
+import { Stream } from "stream";
+import * as path from "path";
 const ANSIEscape = {
     "red": `\u001b[0;31m`,
     "yellow": `\u001b[0;93m`,
@@ -79,7 +77,7 @@ function chunkProcessorGenerator(processor) {
 }
 /**Creates a (? extends Stream.Transform) class from a function that processes one line at a time. */
 function streamTransform(transformFunction) {
-    return class extends stream_1.Stream.Transform {
+    return class extends Stream.Transform {
         _transform(chunk, encoding, callback) {
             try {
                 callback(null, chunkProcessorGenerator(transformFunction)(chunk.toString()));
@@ -98,7 +96,7 @@ function indentChunkProcessorGenerator(processor) {
     return (line, index) => (line.match(/^\[\w\]/) || index == 0 ? processor(line) : `:          ${line}`);
 }
 const LoggerHighlightTransform = streamTransform(indentChunkProcessorGenerator(formatLine));
-class PrependTextTransform extends stream_1.Stream.Transform {
+class PrependTextTransform extends Stream.Transform {
     constructor(getText, opts) {
         super(opts);
         this.getText = getText;
@@ -108,7 +106,7 @@ class PrependTextTransform extends stream_1.Stream.Transform {
     }
 }
 /**Removes a word from logs. Useful to hide your Windows username.*/
-class CensorKeywordTransform extends stream_1.Stream.Transform {
+class CensorKeywordTransform extends Stream.Transform {
     constructor(keyword, replace, opts) {
         super(opts);
         this.keyword = keyword;
@@ -166,7 +164,7 @@ function parseArgs(args) {
 }
 function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     copyMods();
-    const proc = (0, child_process_1.spawn)("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
+    const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
     const d = new Date();
     if (settings.logging.enabled) {
         currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
@@ -219,7 +217,7 @@ function copyMods() {
                 log(`Copying ${("buildmods" in parseArgs) ? "and building " : ""}java mod directory "${file}"`);
                 if (("buildmods" in parseArgs)) {
                     try {
-                        (0, child_process_1.execSync)("gradlew jar", {
+                        execSync("gradlew jar", {
                             cwd: file
                         });
                     }
@@ -388,15 +386,15 @@ stderr:
 ${err.stderr.toString()}`);
         }
         function commitChanges() {
-            (0, child_process_1.execSync)("git add .");
-            (0, child_process_1.execSync)(`git commit -m "[MindustryLauncher] Automated commit: update"`);
+            execSync("git add .");
+            execSync(`git commit -m "[MindustryLauncher] Automated commit: update"`);
         }
         function pull() {
-            (0, child_process_1.execSync)("git pull");
+            execSync("git pull");
         }
         log("Updating...");
         try {
-            (0, child_process_1.execSync)(`${process.platform == "win32" ? "where" : "which"} git`);
+            execSync(`${process.platform == "win32" ? "where" : "which"} git`);
         }
         catch (err) {
             reject("Unable to update automatically as you do not have Git installed.");
@@ -409,7 +407,7 @@ ${err.stderr.toString()}`);
             let errorMessage = err.stderr.toString();
             let outputMessage = err.stdout.toString();
             if (outputMessage.includes("Merge conflict")) {
-                (0, child_process_1.execSync)("git merge --abort");
+                execSync("git merge --abort");
                 reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
             }
             else if (errorMessage.includes("commit your changes")) {
@@ -424,7 +422,7 @@ ${err.stderr.toString()}`);
                         catch (err) {
                             let outputMessage = err.stdout.toString();
                             if (outputMessage.includes("Merge conflict")) {
-                                (0, child_process_1.execSync)("git merge --abort");
+                                execSync("git merge --abort");
                                 reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
                             }
                             else {
@@ -486,7 +484,7 @@ function main(processArgs) {
                     return 1;
                 }
                 log("Compiling...");
-                let gradleProcess = (0, child_process_1.spawn)(`${filePath}/gradlew.bat`, ["desktop:dist"], {
+                let gradleProcess = spawn(`${filePath}/gradlew.bat`, ["desktop:dist"], {
                     cwd: filePath
                 });
                 gradleProcess.stdout.pipe(new PrependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)).pipe(process.stdout);
