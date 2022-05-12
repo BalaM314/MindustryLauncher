@@ -18,6 +18,7 @@ const child_process_1 = require("child_process");
 const readline = require("readline");
 const https = require("https");
 const stream_1 = require("stream");
+const path = require("path");
 const ANSIEscape = {
     "red": `\u001b[0;31m`,
     "yellow": `\u001b[0;93m`,
@@ -134,10 +135,6 @@ async function askYesOrNo(query) {
 const pathSeparator = process.platform == "win32" ? "\\" : "/";
 let parsedArgs;
 let mindustryArgs;
-let vars = {
-    filePath: "AMOGUS",
-    jarName: "SUS"
-};
 let settings;
 let mindustryProcess;
 let currentLogStream;
@@ -251,14 +248,14 @@ function downloadFile(version) {
         });
     });
 }
-async function handleDownload() {
+async function handleDownload(version) {
     if (await askYesOrNo("Would you like to download the file? [y/n]")) {
         try {
             log("Downloading...");
             log("There's no status bar so you just have to trust me.");
-            await downloadFile("v" + parsedArgs["version"]);
+            await downloadFile("v" + version);
             log("Done!");
-            launch(true);
+            launch(path.join(settings.mindustryJars.folderPath, version), true);
         }
         catch (err) {
             error("An error occured while downloading the file: ");
@@ -267,19 +264,19 @@ async function handleDownload() {
         return;
     }
 }
-function launch(recursive) {
+function launch(filePath, recursive) {
     try {
-        fs.accessSync(vars.filePath, fs.constants.R_OK);
+        fs.accessSync(filePath, fs.constants.R_OK);
     }
     catch (err) {
-        error(`Unable to access file ${vars.jarName}.`);
+        error(`Unable to access file ${filePath.split(".")[1]}.`);
         if (recursive) {
             error("Wait what? I just downloaded that.");
             error("Please contact BalaM314 by filing an issue on Github.");
         }
         else {
             error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.");
-            handleDownload();
+            handleDownload(parsedArgs["version"]);
         }
         return;
     }
@@ -287,12 +284,12 @@ function launch(recursive) {
     if (mindustryArgs.length > 0) {
         log(`Arguments: ${mindustryArgs}`);
     }
-    mindustryProcess = startProcess(vars.filePath, settings.jvmArgs, mindustryArgs);
+    mindustryProcess = startProcess(filePath, settings.jvmArgs, mindustryArgs);
     process.stdin.on("data", (data) => {
         switch (data.toString("utf-8").slice(0, -2)) { //Input minus the \r\n at the end.
             case "rs":
             case "restart":
-                restart(vars.filePath, settings.jvmArgs);
+                restart(filePath, settings.jvmArgs);
                 break;
             case "?":
             case "help":
@@ -322,12 +319,12 @@ function launch(recursive) {
             log(`File change detected! (${file})`);
             copyMods();
             if (settings.restartAutomaticallyOnModUpdate)
-                restart(vars.filePath, settings.jvmArgs);
+                restart(filePath, settings.jvmArgs);
         });
     }
 }
 function init() {
-    settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             error(`Jar name for version ${version} contains a space.`);
@@ -338,10 +335,10 @@ function init() {
         error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
         process.exit(1);
     }
-    vars.jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //Use the custom version name, but if it doesnt exist use "v${version}.jar";
-    vars.filePath = vars.jarName.match(/[/\\]/gi) ? vars.jarName : settings.mindustryJars.folderPath + vars.jarName;
+    let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
+    return [settings, jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName];
 }
 function updateLauncher() {
     return new Promise((resolve, reject) => {
@@ -412,7 +409,8 @@ function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
     process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
-    init();
+    let filePath;
+    [settings, filePath] = init();
     if ("help" in parsedArgs) {
         console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
 
@@ -441,27 +439,26 @@ function main(processArgs) {
         return 0;
     }
     if ("version" in parsedArgs) {
-        if (vars.filePath.match(/[/\\]$/i)) {
+        if (filePath.match(/[/\\]$/i)) {
             if ("compile" in parsedArgs) {
                 try {
-                    fs.accessSync(`${vars.filePath}/desktop/build.gradle`);
+                    fs.accessSync(`${filePath}/desktop/build.gradle`);
                 }
                 catch (err) {
-                    error(`Unable to find a build.gradle in ${vars.filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+                    error(`Unable to find a build.gradle in ${filePath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
                     return 1;
                 }
                 log("Compiling...");
-                let gradleProcess = (0, child_process_1.spawn)(`${vars.filePath}/gradlew.bat`, ["desktop:dist"], {
-                    cwd: vars.filePath
+                let gradleProcess = (0, child_process_1.spawn)(`${filePath}/gradlew.bat`, ["desktop:dist"], {
+                    cwd: filePath
                 });
                 gradleProcess.stdout.pipe(new PrependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)).pipe(process.stdout);
                 gradleProcess.stderr.pipe(new PrependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)).pipe(process.stderr);
                 gradleProcess.on("exit", (code) => {
                     if (code == 0) {
                         log("Compiled succesfully.");
-                        vars.jarName = "Mindustry.jar";
-                        vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
-                        launch();
+                        filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                        launch(filePath);
                     }
                     else {
                         error("Compiling failed.");
@@ -471,19 +468,18 @@ function main(processArgs) {
             }
             else {
                 try {
-                    fs.accessSync(`${vars.filePath}/desktop/build/libs/Mindustry.jar`);
+                    fs.accessSync(`${filePath}/desktop/build/libs/Mindustry.jar`);
                 }
                 catch (err) {
-                    error(`Unable to find a Mindustry.jar in ${vars.filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+                    error(`Unable to find a Mindustry.jar in ${filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
                     return 1;
                 }
-                vars.jarName = "Mindustry.jar";
-                vars.filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
-                launch();
+                filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                launch(filePath);
             }
         }
         else {
-            launch();
+            launch(filePath);
         }
     }
     else {
