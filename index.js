@@ -60,7 +60,10 @@ function getTimeComponent(highlighted) {
 function formatLine(line) {
     return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
 }
-/**Generates a chunk processor function from a function that processes one line at a time. */
+/**
+ * Generates a chunk processor function from a function that processes one line at a time.
+ * Does not work correctly.
+ * */
 function chunkProcessorGenerator(processor) {
     return function (chunk) {
         if (chunk == "")
@@ -73,6 +76,7 @@ function chunkProcessorGenerator(processor) {
             + ANSIEscape.reset;
     };
 }
+/**Creates a (? extends Stream.Transform) class from a function that processes one line at a time. */
 function streamTransform(transformFunction) {
     return class extends stream_1.Stream.Transform {
         _transform(chunk, encoding, callback) {
@@ -85,6 +89,10 @@ function streamTransform(transformFunction) {
         }
     };
 }
+/**
+ * Generates a chunk processor function from a function that processes one line at a time but with indented : instead of applying the transform.
+ * Does not work correctly.
+ * */
 function indentChunkProcessorGenerator(processor) {
     return (line, index) => (line.match(/^\[\w\]/) || index == 0 ? processor(line) : `:          ${line}`);
 }
