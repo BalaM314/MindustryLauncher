@@ -209,14 +209,32 @@ function restart(_filePath, _jvmArgs) {
     log("Started new process.");
 }
 function copyMods() {
-    for (var file of settings.externalMods) {
-        log(`Copying mod ${file}`);
-        let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=(Desktop)?\.jar$)/i); //hello regex my old friend
-        if (modname == null) {
-            throw new Error(`Invalid mod filename ${file}!`);
+    for (let file of settings.externalMods) {
+        if (!fs.existsSync(file)) {
+            error(`Mod "${file}" does not exist.`);
+            continue;
         }
-        fs.copyFileSync(file, `${process.env["appdata"]}\\Mindustry\\mods\\${modname[0]}.jar`);
+        if (fs.lstatSync(file).isDirectory()) {
+            log(`Copying mod directory "${file}"`);
+            copyDirectory(file, `${process.env["appdata"]}\\Mindustry\\mods\\`);
+        }
+        else {
+            log(`Copying modfile "${file}"`);
+            let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=(Desktop)?\.(jar)|(zip)$)/i); //hello regex my old friend
+            if (modname == null)
+                error(`Invalid mod filename ${file}!`);
+            else
+                fs.copyFileSync(file, `${process.env["appdata"]}\\Mindustry\\mods\\${modname[0]}.jar`);
+        }
     }
+}
+function copyDirectory(source, destination) {
+    fs.mkdirSync(destination, { recursive: true });
+    fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
+        let sourcePath = path.join(source, entry.name);
+        let destinationPath = path.join(destination, entry.name);
+        entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
+    });
 }
 function parseJSONC(data) {
     return JSON.parse(data.split("\n")
