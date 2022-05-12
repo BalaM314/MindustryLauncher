@@ -311,7 +311,8 @@ function launch(filePath, recursive) {
                 break;
             case "?":
             case "help":
-                log(`Commands: 'restart', 'help'`);
+                log(`Commands: 'restart', 'help', 'exit'`);
+                break;
             case "exit":
             case "e":
                 log("Exiting...");

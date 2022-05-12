@@ -353,9 +353,10 @@ function launch(filePath:string, recursive?:boolean){
 		switch(data.toString("utf-8").slice(0, -2)){//Input minus the \r\n at the end.
 			case "rs": case "restart":
 				restart(filePath, settings.jvmArgs);
-			break;
+				break;
 			case "?": case "help":
-				log(`Commands: 'restart', 'help'`);
+				log(`Commands: 'restart', 'help', 'exit'`);
+				break;
 			case "exit": case "e":
 				log("Exiting...");
 				mindustryProcess.removeAllListeners();
