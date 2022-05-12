@@ -255,7 +255,7 @@ function copyMods(){
 		}
 		if(fs.lstatSync(file).isDirectory()){
 			log(`Copying mod directory "${file}"`);
-			copyDirectory(file, `${process.env["appdata"]}\\Mindustry\\mods\\`)
+			copyDirectory(file, `${process.env["appdata"]}\\Mindustry\\mods\\${file.split(/[\/\\]/).at(-1)}`)
 		} else {
 			log(`Copying modfile "${file}"`);
 			let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=(Desktop)?\.(jar)|(zip)$)/i);//hello regex my old friend
