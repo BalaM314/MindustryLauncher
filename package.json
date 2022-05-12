@@ -19,7 +19,7 @@
     "url": "https://github.com/BalaM314/MindustryLauncher/issues"
   },
   "homepage": "https://github.com/BalaM314/MindustryLauncher#readme",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@types/node": "^17.0.23"
   }

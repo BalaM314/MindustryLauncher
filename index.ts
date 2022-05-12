@@ -269,8 +269,8 @@ function copyMods(){
 				let modFile = fs.readdirSync(path.join(file, "build", "libs"))[0];
 				let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
 				fs.copyFileSync(
-					modFile,
-					`${process.env["appdata"]}\\Mindustry\\mods\\${modName}.jar`
+					path.join(file, "build", "libs", modFile),
+					path.join(process.env["appdata"]!, "Mindustry", "mods", modName + ".jar")
 				);
 
 			} else {
