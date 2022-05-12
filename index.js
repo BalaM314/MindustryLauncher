@@ -349,7 +349,8 @@ function launch(filePath, recursive) {
         }
         process.exit();
     });
-    for (var file of settings.externalMods) {
+    for (let filepath of settings.externalMods) {
+        let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filePath;
         fs.watchFile(file, () => {
             log(`File change detected! (${file})`);
             if (settings.restartAutomaticallyOnModUpdate)

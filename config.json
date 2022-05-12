@@ -29,7 +29,7 @@
 	"externalMods": [
 		//List of external mods to copy into the mods folder automatically when the file changes.
 	],
-	"restartAutomaticallyOnModUpdate": true,
+	"restartAutomaticallyOnModUpdate": false,
 	"logging": {
 		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
 		"path": "C:\\Mindustry\\logs\\",
