@@ -215,8 +215,26 @@ function copyMods() {
             continue;
         }
         if (fs.lstatSync(file).isDirectory()) {
-            log(`Copying mod directory "${file}"`);
-            copyDirectory(file, `${process.env["appdata"]}\\Mindustry\\mods\\${file.split(/[\/\\]/).at(-1)}`);
+            if (fs.existsSync(path.join(file, "build.gradle"))) {
+                log(`Copying ${("buildmods" in parseArgs) ? "and building " : ""}java mod directory "${file}"`);
+                if (("buildmods" in parseArgs)) {
+                    try {
+                        (0, child_process_1.execSync)("gradlew jar", {
+                            cwd: file
+                        });
+                    }
+                    catch (err) {
+                        throw `Build failed!`;
+                    }
+                }
+                let modFile = fs.readdirSync(path.join(file, "build", "libs"))[0];
+                let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+                fs.copyFileSync(modFile, `${process.env["appdata"]}\\Mindustry\\mods\\${modName}.jar`);
+            }
+            else {
+                log(`Copying mod directory "${file}"`);
+                copyDirectory(file, `${process.env["appdata"]}\\Mindustry\\mods\\${file.split(/[\/\\]/).at(-1)}`);
+            }
         }
         else {
             log(`Copying modfile "${file}"`);
@@ -510,6 +528,11 @@ try {
     main(process.argv);
 }
 catch (err) {
-    error("Unhandled runtime error!");
-    throw err;
+    if (typeof err == "string") {
+        error("Exiting due to fatal error.");
+    }
+    else {
+        error("Unhandled runtime error!");
+        throw err;
+    }
 }
