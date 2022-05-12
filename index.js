@@ -287,7 +287,7 @@ function launch(filePath, recursive) {
         fs.accessSync(filePath, fs.constants.R_OK);
     }
     catch (err) {
-        error(`Unable to access file ${filePath.split(".")[1]}.`);
+        error(`Unable to access file "${filePath}".`);
         if (recursive) {
             error("Wait what? I just downloaded that.");
             error("Please contact BalaM314 by filing an issue on Github.");
