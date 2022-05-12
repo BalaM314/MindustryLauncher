@@ -214,8 +214,8 @@ function copyMods() {
         }
         if (fs.lstatSync(file).isDirectory()) {
             if (fs.existsSync(path.join(file, "build.gradle"))) {
-                log(`Copying ${("buildmods" in parseArgs) ? "and building " : ""}java mod directory "${file}"`);
-                if (("buildmods" in parseArgs)) {
+                log(`Copying ${("buildmods" in parsedArgs) ? "and building " : ""}java mod directory "${file}"`);
+                if (("buildmods" in parsedArgs)) {
                     try {
                         execSync("gradlew jar", {
                             cwd: file
@@ -352,7 +352,6 @@ function launch(filePath, recursive) {
     for (var file of settings.externalMods) {
         fs.watchFile(file, () => {
             log(`File change detected! (${file})`);
-            copyMods();
             if (settings.restartAutomaticallyOnModUpdate)
                 restart(filePath, settings.jvmArgs);
         });
