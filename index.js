@@ -32,6 +32,8 @@ const ANSIEscape = {
     "reset": `\u001b[0m`,
     "brightpurple": `\u001b[0;95m`
 };
+const config = path.resolve(__dirname, 'config.json');
+
 function log(message) {
     console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
@@ -343,7 +345,7 @@ function launch(filePath, recursive) {
     }
 }
 function init() {
-    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+    let settings = parseJSONC(fs.readFileSync(config, "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             error(`Jar name for version ${version} contains a space.`);
