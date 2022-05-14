@@ -409,8 +409,10 @@ function launch(filePath:string, recursive?:boolean){
 	}
 }
 
-function init(): [Settings, string] {
+function init(processArgs:string[]): [Settings, string] {
 	let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+	process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
+	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
 
 	for(let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)){
 		if(jarName.includes(" ")){
@@ -494,12 +496,9 @@ ${err.stderr.toString()}`
 
 function main(processArgs:typeof process.argv):number {
 	//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
-	process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
-	
-	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
 
 	let filePath:string;
-	[settings, filePath] = init();
+	[settings, filePath] = init(processArgs);
 
 	if("help" in parsedArgs){
 		console.log(

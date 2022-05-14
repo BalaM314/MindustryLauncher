@@ -358,10 +358,10 @@ function launch(filePath, recursive) {
         });
     }
 }
-function init() {
+function init(processArgs) {
+    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
-    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             error(`Jar name for version ${version} contains a space.`);
@@ -445,7 +445,7 @@ ${err.stderr.toString()}`);
 function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
     let filePath;
-    [settings, filePath] = init();
+    [settings, filePath] = init(processArgs);
     if ("help" in parsedArgs) {
         console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
 
