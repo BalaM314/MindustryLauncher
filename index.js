@@ -32,7 +32,7 @@ const ANSIEscape = {
     "reset": `\u001b[0m`,
     "brightpurple": `\u001b[0;95m`
 };
-const config = path.resolve(__dirname, 'config.json');
+const config = process.chdir(__dirname, 'config.json');
 
 function log(message) {
     console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
