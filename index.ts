@@ -464,9 +464,9 @@ function launch(filePath:string, recursive?:boolean){
 }
 
 function init(processArgs:string[]): [Settings, string] {
-	let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
 	process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
 	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
+	let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
 
 	for(let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)){
 		if(jarName.includes(" ")){

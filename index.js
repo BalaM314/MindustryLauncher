@@ -260,34 +260,88 @@ function parseJSONC(data) {
         //Removes "multiline" comments.
         .join("\n"));
 }
-function downloadFile(version) {
+function downloadFile(url, output) {
     return new Promise((resolve, reject) => {
-        https.get(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`, (res) => {
-            if (res.statusCode != 302) {
-                if (res.statusCode == 404) {
-                    return reject("The specified version was not found.");
-                }
-                return reject("Expected status 302, got " + res.statusCode);
+        https.get(url, (res) => {
+            if (res.statusCode != 200) {
+                reject(`Expected status code 200, got ${res.statusCode}`);
             }
-            if (!res.headers.location)
-                return reject("Redirect location not given");
-            https.get(res.headers.location, (res) => {
-                const file = fs.createWriteStream(`${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
-                res.pipe(file);
-                file.on('finish', () => {
-                    file.close();
-                    resolve("File downloaded!");
-                });
+            const file = fs.createWriteStream(output);
+            res.pipe(file);
+            file.on('finish', () => {
+                file.close();
+                resolve("File downloaded!");
             });
         });
+    });
+}
+function resolveRedirect(url) {
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            if (res.statusCode != 302) {
+                if (res.statusCode == 404) {
+                    reject("Version does not exist.");
+                }
+                else {
+                    reject(`Error: Expected status 302, got ${res.statusCode}`);
+                }
+            }
+            if (res.headers.location) {
+                return res.headers.location;
+            }
+            else {
+                reject(`Error: Server did not respond with redirect location.`);
+            }
+        });
+    });
+}
+function getPathOfVersion(version) {
+    return new Promise((resolve, reject) => {
+        if (version.match(/^\d+$/)) {
+            //Regular mindustry version
+            resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`)
+                .then(response => resolve(response))
+                .catch(error => reject(error));
+        }
+        else if (version.match(/(?<=^foo-)\d+$/i)) {
+            //Foo version
+            let currentVersion = version.match(/(?<=^foo-)\d+$/i)?.[0];
+            resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
+                .then(response => resolve(response))
+                .catch(error => reject(error));
+        }
+        else if (version.match(/(?<=be-)\d+$/i)) {
+            //Bleeding edge version
+            reject("Not yet implemented.");
+        }
+        else if (version == "foo") {
+            https.get(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, (res) => {
+                if (res.statusCode != 302) {
+                    reject(`Error: Expected status 302, got ${res.statusCode}`);
+                }
+                if (res.headers.location) {
+                    let currentVersion = res.headers.location.match(/(?<=\/tag)\d+/)?.[0];
+                    if (!currentVersion) {
+                        reject(`Error: Server responded with invalid redirect location.`);
+                    }
+                    resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
+                        .then(response => resolve(response))
+                        .catch(error => reject(error));
+                }
+                else {
+                    reject(`Error: Server did not respond with redirect location.`);
+                }
+            });
+        }
     });
 }
 async function handleDownload(version) {
     if (await askYesOrNo("Would you like to download the file? [y/n]")) {
         try {
+            let downloadPath = await getPathOfVersion(version);
             log("Downloading...");
             log("There's no status bar so you just have to trust me.");
-            await downloadFile("v" + version);
+            await downloadFile(downloadPath, `${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
             log("Done!");
             launch(path.join(settings.mindustryJars.folderPath, version), true);
         }
@@ -359,9 +413,9 @@ function launch(filePath, recursive) {
     }
 }
 function init(processArgs) {
-    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
+    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             error(`Jar name for version ${version} contains a space.`);
