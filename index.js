@@ -415,7 +415,23 @@ function launch(filePath, recursive) {
 function init(processArgs) {
     process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
-    let settings = parseJSONC(fs.readFileSync("config.json", "utf-8"));
+    //check settings
+    let configPath = path.join(process.env["APPDATA"], "Mindustry/launcher/");
+    if (!fs.existsSync(path.join(configPath, "config.json"))) {
+        log("No config.json file found, creating one. If this is your first launch, this is fine.");
+        if (!fs.existsSync(configPath)) {
+            fs.mkdirSync(configPath);
+        }
+        fs.copyFileSync("template-config.json", path.join(configPath, "config.json"));
+        log("Opening the file. You will need to edit it.");
+        try {
+            execSync(`code ${path.join(configPath, "config.json")}`);
+        }
+        catch (err) {
+            execSync(`notepad ${path.join(configPath, "config.json")}`);
+        }
+    }
+    let settings = parseJSONC(fs.readFileSync(path.join(configPath, "config.json"), "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             error(`Jar name for version ${version} contains a space.`);
@@ -557,10 +573,10 @@ function main(processArgs) {
             }
             else {
                 try {
-                    fs.accessSync(`${filePath}/desktop/build/libs/Mindustry.jar`);
+                    fs.accessSync(path.join(filePath, `desktop/build/libs/Mindustry.jar`));
                 }
                 catch (err) {
-                    error(`Unable to find a Mindustry.jar in ${filePath}/desktop/build/libs/Mindustry.jar. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+                    error(`Unable to find a Mindustry.jar in ${path.join(filePath, `desktop/build/libs/Mindustry.jar`)}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
                     return 1;
                 }
                 filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;

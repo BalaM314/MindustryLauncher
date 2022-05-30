@@ -2,7 +2,7 @@
 	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
 	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
-		//Set this to a folder containing the .jar files for each version.
+		//REQUIRED: Set this to a folder containing the .jar files for each version.
 		//Example: "folderPath": "C:\\Mindustry\\versions\\"
 		"folderPath": "C:\\Mindustry\\Versions\\",
 		"customVersionNames": {
