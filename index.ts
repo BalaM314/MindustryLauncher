@@ -41,6 +41,9 @@ function log(message: string){
 function error(message: string){
 	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
+function debug(message: string){
+	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
+}
 
 function getLogHighlight(char:string){
 	switch(char){
@@ -58,58 +61,45 @@ function getLogHighlight(char:string){
 }
 function getTimeComponent(highlighted:boolean){
 	if(highlighted)
-		return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]${ANSIEscape.reset}`;
+		return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]`;
 	else
 		return `[${new Date().toTimeString().split(" ")[0]}]`;
 }
 function formatLine(line:string){
 	return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
 }
-/**
- * Generates a chunk processor function from a function that processes one line at a time.
- * Does not work correctly.
- * */
-function chunkProcessorGenerator(processor:(line:string, index:number) => string): (text:string) => string {
-	return function(chunk:string):string {
-		if(chunk == "") return "";
-		if(chunk.match(/^\r?\n$/)) return chunk;
-		return chunk.split(/(?<=\r?\n)/)
-			.map(processor)
-			.join("")
-			+ ANSIEscape.reset;
-	}
-}
+
 /**Creates a (? extends Stream.Transform) class from a function that processes one line at a time. */
-function streamTransform(transformFunction: (text:string, index:number) => string){
+function streamTransform(transformFunction: (text:string, chunkIndex:number) => string){
 	return class extends Stream.Transform {
-		_transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void {
-			try {
-				callback(null, chunkProcessorGenerator(transformFunction)(chunk.toString()));
-			} catch(err){
-				callback(err as any);
-			}
+		private _line: string;
+		constructor(opts?:TransformOptions){
+			super(opts);
+			this._line = "";
+		}
+		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+			this._line += chunk.toString();
+			const lines = this._line.split(/\r?\n/);
+			callback(
+				null,
+				lines
+				.slice(0, -1)
+				.map(line => line + "\n")
+				.map(transformFunction)
+				.join("")
+			);
+			this._line = lines.at(-1)!;
 		}
 	}
 }
-/**
- * Generates a chunk processor function from a function that processes one line at a time but with indented : instead of applying the transform.
- * Does not work correctly.
- * */
-function indentChunkProcessorGenerator(processor:(line:string) => string): (text:string, index:number) => string {
-	return (line, index) => (line.match(/^\[\w\]/) || index == 0 ? processor(line) : `:          ${line}`);
-}
-const LoggerHighlightTransform = streamTransform(
-	indentChunkProcessorGenerator(formatLine)
-);
 
-class PrependTextTransform extends Stream.Transform {
-	constructor(public getText: () => string, opts?:TransformOptions){
-		super(opts);
-	}
-	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-		callback(null, chunkProcessorGenerator((line) => `${this.getText()} ${line}`)(chunk.toString()));
-	}
+const LoggerHighlightTransform = streamTransform(
+	(line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`)
+);
+function prependTextTransform(text: () => string){
+	return streamTransform((line) => `${text()} ${line}`);
 }
+
 /**Removes a word from logs. Useful to hide your Windows username.*/
 class CensorKeywordTransform extends Stream.Transform {
 	constructor(public keyword:string, public replace:string, opts?:TransformOptions){
@@ -211,12 +201,12 @@ function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: str
 		//Creates a write stream and pipes the output of the mindustry process into it.
 		if(settings.logging.removeUsername)
 			proc.stdout
-				.pipe(new PrependTextTransform(() => getTimeComponent(false)))
+				.pipe(new (prependTextTransform(() => getTimeComponent(false))))
 				.pipe(new CensorKeywordTransform(process.env["USERNAME"]!, "[USERNAME]"))
 				.pipe(currentLogStream);
 		else
 			proc.stdout
-			.pipe(new PrependTextTransform(() => getTimeComponent(false)))
+			.pipe(new (prependTextTransform(() => getTimeComponent(false))))
 				.pipe(currentLogStream);
 	}
 	if(settings.logging.removeUsername){
@@ -609,8 +599,12 @@ function main(processArgs:typeof process.argv):number {
 				let gradleProcess = spawn(`${filePath}/gradlew.bat`, ["desktop:dist"], {
 					cwd: filePath
 				});
-				gradleProcess.stdout.pipe(new PrependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)).pipe(process.stdout);
-				gradleProcess.stderr.pipe(new PrependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)).pipe(process.stderr);
+				gradleProcess.stdout
+					.pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+					.pipe(process.stdout);
+				gradleProcess.stderr
+					.pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+					.pipe(process.stderr);
 				gradleProcess.on("exit", (code) => {
 					if(code == 0){
 						log("Compiled succesfully.");
