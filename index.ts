@@ -303,8 +303,10 @@ function parseJSONC(data:string):Settings {
 function downloadFile(url:string, output:string){
 	return new Promise((resolve, reject) => {
 		https.get(url, (res) => {
-			if(res.statusCode != 200){
-				reject(`Expected status code 200, got ${res.statusCode}`)
+			if(res.statusCode == 404){
+				reject(`File does not exist.`);
+			} else if(res.statusCode != 200){
+				reject(`Expected status code 200, got ${res.statusCode}`);
 			}
 			const file = fs.createWriteStream(output);
 			res.pipe(file);
@@ -337,14 +339,14 @@ function resolveRedirect(url:string):Promise<string> {
 
 function getPathOfVersion(version: string):Promise<string>{
 	return new Promise((resolve, reject) => {
-		if(version.match(/^\d+$/)){
+		if(version.match(/^\d+\.?\d?$/)){
 			//Regular mindustry version
 			resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`)
 				.then(response => resolve(response))
 				.catch(error => reject(error));
 		} else if(version.match(/(?<=^foo-)\d+$/i)){
 			//Foo version
-			let currentVersion = version.match(/(?<=^foo-)\d+$/i)?.[0]!;
+			let currentVersion = version.match(/(?<=^foo-)\d+$/i)![0]!;
 			resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
 				.then(response => resolve(response))
 				.catch(error => reject(error));
