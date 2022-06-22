@@ -110,7 +110,6 @@ async function askYesOrNo(query) {
     let response = await askQuestion(query);
     return response == "y" || response == "yes";
 }
-const pathSeparator = process.platform == "win32" ? "\\" : "/";
 let parsedArgs;
 let mindustryArgs;
 let settings;
@@ -243,7 +242,10 @@ function parseJSONC(data) {
 function downloadFile(url, output) {
     return new Promise((resolve, reject) => {
         https.get(url, (res) => {
-            if (res.statusCode != 200) {
+            if (res.statusCode == 404) {
+                reject(`File does not exist.`);
+            }
+            else if (res.statusCode != 200) {
                 reject(`Expected status code 200, got ${res.statusCode}`);
             }
             const file = fs.createWriteStream(output);
@@ -267,7 +269,7 @@ function resolveRedirect(url) {
                 }
             }
             if (res.headers.location) {
-                return res.headers.location;
+                resolve(res.headers.location);
             }
             else {
                 reject(`Error: Server did not respond with redirect location.`);
@@ -277,15 +279,15 @@ function resolveRedirect(url) {
 }
 function getPathOfVersion(version) {
     return new Promise((resolve, reject) => {
-        if (version.match(/^\d+$/)) {
+        if (version.match(/^\d+\.?\d?$/)) {
             //Regular mindustry version
-            resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`)
+            resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`)
                 .then(response => resolve(response))
                 .catch(error => reject(error));
         }
         else if (version.match(/(?<=^foo-)\d+$/i)) {
             //Foo version
-            let currentVersion = version.match(/(?<=^foo-)\d+$/i)?.[0];
+            let currentVersion = version.match(/(?<=^foo-)\d+$/i)[0];
             resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
                 .then(response => resolve(response))
                 .catch(error => reject(error));
@@ -300,7 +302,7 @@ function getPathOfVersion(version) {
                     reject(`Error: Expected status 302, got ${res.statusCode}`);
                 }
                 if (res.headers.location) {
-                    let currentVersion = res.headers.location.match(/(?<=\/tag)\d+/)?.[0];
+                    let currentVersion = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
                     if (!currentVersion) {
                         reject(`Error: Server responded with invalid redirect location.`);
                     }
@@ -318,18 +320,22 @@ function getPathOfVersion(version) {
 async function handleDownload(version) {
     if (await askYesOrNo("Would you like to download the file? [y/n]")) {
         try {
+            log("Resolving version...");
             let downloadPath = await getPathOfVersion(version);
             log("Downloading...");
             log("There's no status bar so you just have to trust me.");
-            await downloadFile(downloadPath, `${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
+            await downloadFile(downloadPath, `${settings.mindustryJars.folderPath}${path.sep}v${version}.jar`);
             log("Done!");
-            launch(path.join(settings.mindustryJars.folderPath, version), true);
         }
         catch (err) {
             error("An error occured while downloading the file: ");
             error(err);
+            return false;
         }
-        return;
+        return true;
+    }
+    else {
+        log("Exiting.");
     }
 }
 function launch(filePath, recursive) {
@@ -344,7 +350,12 @@ function launch(filePath, recursive) {
         }
         else {
             error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.");
-            handleDownload(parsedArgs["version"]);
+            handleDownload(parsedArgs["version"])
+                .then((worked) => {
+                if (worked) {
+                    launch(filePath, true);
+                }
+            });
         }
         return;
     }
@@ -393,7 +404,7 @@ function launch(filePath, recursive) {
     }
 }
 function init(processArgs) {
-    process.chdir(process.argv[1].split(pathSeparator).slice(0, -1).join(pathSeparator));
+    process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
     //check settings
     let configPath = path.join(process.env["APPDATA"], "Mindustry/launcher/");
@@ -546,7 +557,7 @@ function main(processArgs) {
                 gradleProcess.on("exit", (code) => {
                     if (code == 0) {
                         log("Compiled succesfully.");
-                        filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                        filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
                         launch(filePath);
                     }
                     else {
@@ -563,7 +574,7 @@ function main(processArgs) {
                     error(`Unable to find a Mindustry.jar in ${path.join(filePath, `desktop/build/libs/Mindustry.jar`)}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
                     return 1;
                 }
-                filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+                filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
                 launch(filePath);
             }
         }

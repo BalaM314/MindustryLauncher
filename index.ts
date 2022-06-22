@@ -127,8 +127,6 @@ async function askYesOrNo(query:string): Promise<boolean> {
 	return response == "y" || response == "yes"
 }
 
-const pathSeparator = process.platform == "win32" ? "\\" : "/";
-
 let parsedArgs: {
 	[index: string]: string;
 };
@@ -329,7 +327,7 @@ function resolveRedirect(url:string):Promise<string> {
 				}
 			}
 			if(res.headers.location){
-				return res.headers.location;
+				resolve(res.headers.location);
 			} else {
 				reject(`Error: Server did not respond with redirect location.`);
 			}
@@ -341,7 +339,7 @@ function getPathOfVersion(version: string):Promise<string>{
 	return new Promise((resolve, reject) => {
 		if(version.match(/^\d+\.?\d?$/)){
 			//Regular mindustry version
-			resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/${version}/Mindustry.jar`)
+			resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`)
 				.then(response => resolve(response))
 				.catch(error => reject(error));
 		} else if(version.match(/(?<=^foo-)\d+$/i)){
@@ -359,7 +357,7 @@ function getPathOfVersion(version: string):Promise<string>{
 					reject(`Error: Expected status 302, got ${res.statusCode}`);
 				}
 				if(res.headers.location){
-					let currentVersion = res.headers.location.match(/(?<=\/tag)\d+/)?.[0];
+					let currentVersion = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
 					if(!currentVersion){
 						reject(`Error: Server responded with invalid redirect location.`);
 					}
@@ -378,18 +376,21 @@ async function handleDownload(version: string){
 
 	if(await askYesOrNo("Would you like to download the file? [y/n]")){
 		try {
+			log("Resolving version...")
 			let downloadPath = await getPathOfVersion(version);
 			
 			log("Downloading...");
 			log("There's no status bar so you just have to trust me.");
-			await downloadFile(downloadPath, `${settings.mindustryJars.folderPath}${pathSeparator}${version}.jar`);
+			await downloadFile(downloadPath, `${settings.mindustryJars.folderPath}${path.sep}v${version}.jar`);
 			log("Done!");
-			launch(path.join(settings.mindustryJars.folderPath, version), true);
 		} catch(err){
 			error("An error occured while downloading the file: ");
 			error(err as any);
+			return false;
 		}
-		return;
+		return true;
+	} else {
+		log("Exiting.");
 	}
 }
 
@@ -404,7 +405,12 @@ function launch(filePath:string, recursive?:boolean){
 			error("Please contact BalaM314 by filing an issue on Github.");
 		} else {
 			error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.")
-			handleDownload(parsedArgs["version"]);
+			handleDownload(parsedArgs["version"])
+				.then((worked) => {
+					if(worked){
+						launch(filePath, true)
+					}
+				});
 		}
 		return;
 	}
@@ -456,7 +462,7 @@ function launch(filePath:string, recursive?:boolean){
 }
 
 function init(processArgs:string[]): [Settings, string] {
-	process.chdir(process.argv[1].split(pathSeparator).slice(0,-1).join(pathSeparator));
+	process.chdir(process.argv[1].split(path.sep).slice(0,-1).join(path.sep));
 	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
 
 	//check settings
@@ -610,7 +616,7 @@ function main(processArgs:typeof process.argv):number {
 				gradleProcess.on("exit", (code) => {
 					if(code == 0){
 						log("Compiled succesfully.");
-						filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+						filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
 						launch(filePath);
 					} else {
 						error("Compiling failed.");
@@ -625,7 +631,7 @@ function main(processArgs:typeof process.argv):number {
 					error(`Unable to find a Mindustry.jar in ${path.join(filePath, `desktop/build/libs/Mindustry.jar`)}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
 					return 1;
 				}
-				filePath += `desktop${pathSeparator}build${pathSeparator}libs${pathSeparator}Mindustry.jar`;
+				filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
 				launch(filePath);
 			}
 			
