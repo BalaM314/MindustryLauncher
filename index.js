@@ -143,8 +143,12 @@ function parseArgs(args) {
 }
 function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     copyMods();
-    const proc = spawn("java", _jvmArgs.concat(_mindustryArgs).concat([`-jar ${_filePath}`]).concat(settings.processArgs).join(" ").split(" "));
+    const proc = spawn("java", [..._jvmArgs, `-jar`, _filePath, ...settings.processArgs, ..._mindustryArgs]);
     const d = new Date();
+    const username = process.env["USERNAME"] ?? process.env["USER"] ?? (() => {
+        settings.logging.removeUsername = false;
+        return ""; //this is bodge lol
+    })();
     if (settings.logging.enabled) {
         currentLogStream = fs.createWriteStream(`${settings.logging.path}${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
         //Creates a write stream and pipes the output of the mindustry process into it.
@@ -161,11 +165,11 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     if (settings.logging.removeUsername) {
         proc.stdout
             .pipe(new LoggerHighlightTransform())
-            .pipe(new CensorKeywordTransform(process.env["USERNAME"], "[USERNAME]"))
+            .pipe(new CensorKeywordTransform(username, "[USERNAME]"))
             .pipe(process.stdout);
         proc.stderr
             .pipe(new LoggerHighlightTransform())
-            .pipe(new CensorKeywordTransform(process.env["USERNAME"], "[USERNAME]"))
+            .pipe(new CensorKeywordTransform(username, "[USERNAME]"))
             .pipe(process.stderr);
     }
     else {
