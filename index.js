@@ -291,14 +291,17 @@ function getPathOfVersion(version) {
         }
         else if (version.match(/(?<=^foo-)\d+$/i)) {
             //Foo version
-            let currentVersion = version.match(/(?<=^foo-)\d+$/i)[0];
-            resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
+            let versionNumber = version.match(/(?<=^foo-)\d+$/i)[0];
+            resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
                 .then(response => resolve(response))
                 .catch(error => reject(error));
         }
         else if (version.match(/(?<=be-)\d+$/i)) {
             //Bleeding edge version
-            reject("Not yet implemented.");
+            let versionNumber = version.match(/(?<=be-)\d+$/i)[0];
+            resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
+                .then(response => resolve(response))
+                .catch(error => reject(error));
         }
         else if (version == "foo") {
             https.get(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, (res) => {
@@ -306,11 +309,30 @@ function getPathOfVersion(version) {
                     reject(`Error: Expected status 302, got ${res.statusCode}`);
                 }
                 if (res.headers.location) {
-                    let currentVersion = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
-                    if (!currentVersion) {
+                    let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+                    if (!versionNumber) {
                         reject(`Error: Server responded with invalid redirect location.`);
                     }
-                    resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${currentVersion}/desktop.jar`)
+                    resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
+                        .then(response => resolve(response))
+                        .catch(error => reject(error));
+                }
+                else {
+                    reject(`Error: Server did not respond with redirect location.`);
+                }
+            });
+        }
+        else if (version == "be") {
+            https.get(`https://github.com/Anuken/MindustryBuilds/releases/latest`, (res) => {
+                if (res.statusCode != 302) {
+                    reject(`Error: Expected status 302, got ${res.statusCode}`);
+                }
+                if (res.headers.location) {
+                    let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+                    if (!versionNumber) {
+                        reject(`Error: Server responded with invalid redirect location.`);
+                    }
+                    resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
                         .then(response => resolve(response))
                         .catch(error => reject(error));
                 }
@@ -440,7 +462,8 @@ function init(processArgs) {
     //Use the custom version name, but if it doesnt exist use "v${version}.jar";
     let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
-    return [settings, jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName];
+    let filePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
+    return [settings, filePath.replace(/%[^ %]+%/g, (text) => process.env[text.split("%")[1]] ?? text)];
 }
 function updateLauncher() {
     return new Promise((resolve, reject) => {
