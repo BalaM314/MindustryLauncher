@@ -18,6 +18,7 @@
 	"jvmArgs": [
 		//JVM arguments, don't touch if you don't understand.
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
+		"-Dpolicone",
 		"-XX:+ShowCodeDetailsInExceptionMessages",
 		//Memory allocation, minimum 1G and maximum 2G.
 		"-Xmx2G",
