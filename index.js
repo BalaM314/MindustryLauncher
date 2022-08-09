@@ -83,7 +83,7 @@ function streamTransform(transformFunction) {
 }
 const LoggerHighlightTransform = streamTransform((line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`));
 function prependTextTransform(text) {
-    return streamTransform((line) => `${text()} ${line}`);
+    return streamTransform((line) => `${text instanceof Function ? text() : text} ${line}`);
 }
 /**Removes a word from logs. Useful to hide your Windows username.*/
 class CensorKeywordTransform extends Stream.Transform {

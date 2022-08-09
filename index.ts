@@ -18,7 +18,6 @@ import * as readline from "readline";
 import * as https from "https";
 import { Stream, TransformCallback, TransformOptions } from "stream";
 import * as path from "path";
-import * as util from "util";
 
 
 const ANSIEscape = {
@@ -96,8 +95,8 @@ function streamTransform(transformFunction: (text:string, chunkIndex:number) => 
 const LoggerHighlightTransform = streamTransform(
 	(line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`)
 );
-function prependTextTransform(text: () => string){
-	return streamTransform((line) => `${text()} ${line}`);
+function prependTextTransform(text: string | (() => string)){
+	return streamTransform((line) => `${text instanceof Function ? text() : text} ${line}`);
 }
 
 /**Removes a word from logs. Useful to hide your Windows username.*/
@@ -105,12 +104,12 @@ class CensorKeywordTransform extends Stream.Transform {
 	constructor(public keyword:string, public replace:string, opts?:TransformOptions){
 		super(opts);
 	}
-	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback):void {
 		callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
 	}
 }
 
-function askQuestion(query:string): Promise<string> {
+function askQuestion(query:string):Promise<string> {
 	const rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout,
@@ -119,12 +118,12 @@ function askQuestion(query:string): Promise<string> {
 	return new Promise(resolve => rl.question(query, ans => {
 		rl.close();
 		resolve(ans);
-	}))
+	}));
 }
 
-async function askYesOrNo(query:string): Promise<boolean> {
+async function askYesOrNo(query:string):Promise<boolean> {
 	let response = await askQuestion(query);
-	return response == "y" || response == "yes"
+	return response == "y" || response == "yes";
 }
 
 let parsedArgs: {
@@ -638,10 +637,10 @@ function main(processArgs:typeof process.argv):number {
 					cwd: filePath
 				});
 				gradleProcess.stdout
-					.pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+					.pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
 					.pipe(process.stdout);
 				gradleProcess.stderr
-					.pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+					.pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
 					.pipe(process.stderr);
 				gradleProcess.on("exit", (code) => {
 					if(code == 0){
