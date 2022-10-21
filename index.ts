@@ -279,7 +279,7 @@ function startProcess(_filePath: string, _jvmArgs: string[], _mindustryArgs: str
 	return proc;
 }
 
-function restart(_filePath: string, _jvmArgs: string[], build:boolean, compile:boolean){
+function restart(_filePath: string, _jvmArgs: string[], build:boolean, compile:boolean, mindustryDirectory:string){
 	if(build && compile){
 		error("How were you able to trigger a rebuild and a recompile at the same time? Restarting...");
 	} else if(build){
@@ -291,13 +291,13 @@ function restart(_filePath: string, _jvmArgs: string[], build:boolean, compile:b
 	}
 	mindustryProcess.removeAllListeners();
 	mindustryProcess.kill("SIGTERM");//todo see if this causes issues
-	if(build) copyMods();
+	if(build) copyMods(path.join(mindustryDirectory, "mods"));
 	if(compile) error("Compiling mods on restart is not yet implemented because this bit of code doesn't know what to compile");
 	mindustryProcess = startProcess(_filePath, _jvmArgs, mindustryArgs);
 	log("Started new process.");
 }
 
-function copyMods(){
+function copyMods(modsDirectory:string){
 	for(let file of settings.externalMods){
 		if(!fs.existsSync(file)){
 			error(`Mod "${file}" does not exist.`);
@@ -321,7 +321,7 @@ function copyMods(){
 				let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
 				fs.copyFileSync(
 					path.join(file, "build", "libs", modFile),
-					path.join(process.env["appdata"]!, "Mindustry", "mods", modName + ".jar")
+					path.join(modsDirectory, modName + ".jar")
 				);
 
 			} else {
@@ -438,7 +438,7 @@ async function handleDownload(version: string){
 	}
 }
 
-function launch(filePath:string, recursive?:boolean){
+function launch(filePath:string, recursive:boolean, mindustryDirectory:string){
 	
 	try {
 		fs.accessSync(filePath, fs.constants.R_OK);
@@ -452,7 +452,7 @@ function launch(filePath:string, recursive?:boolean){
 			handleDownload(parsedArgs["version"])
 				.then((worked) => {
 					if(worked){
-						launch(filePath, true)
+						launch(filePath, true, mindustryDirectory)
 					}
 				});
 		}
@@ -469,13 +469,13 @@ function launch(filePath:string, recursive?:boolean){
 	process.stdin.on("data", (data) => {
 		switch(data.toString("utf-8").slice(0, -2)){//Input minus the \r\n at the end.
 			case "rs": case "restart":
-				restart(filePath, settings.jvmArgs, false, false);
+				restart(filePath, settings.jvmArgs, false, false, mindustryDirectory);
 				break;
 			case "rb": case "rebuild":
-				restart(filePath, settings.jvmArgs, true, false);
+				restart(filePath, settings.jvmArgs, true, false, mindustryDirectory);
 				break;
 			case "rc": case "recompile":
-				restart(filePath, settings.jvmArgs, false, true);
+				restart(filePath, settings.jvmArgs, false, true, mindustryDirectory);
 				break;
 			case "?": case "help":
 				log(`Commands: 'restart', 'help', 'exit'`);
@@ -497,19 +497,24 @@ function launch(filePath:string, recursive?:boolean){
 			let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filePath;
 			fs.watchFile(file, () => {
 				log(`File change detected! (${file})`);
-				restart(filePath, settings.jvmArgs, true, false);
+				restart(filePath, settings.jvmArgs, true, false, mindustryDirectory);
 			});
 		}
 	}
 
 }
 
-function init(processArgs:string[]): [Settings, string] {
+function init(processArgs:string[]): [settings:Settings, filePath:string, mindustryDirectory:string] {
 	process.chdir(process.argv[1].split(path.sep).slice(0,-1).join(path.sep));
 	[parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
 
 	//check settings
-	let configPath = path.join(process.env["APPDATA"]!, "Mindustry/launcher/");
+	let mindustryDirectory =
+		process.platform == "win32" ? path.join(process.env["APPDATA"]!, "Mindustry/") :
+		process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") : 
+		process.platform == "linux" ? path.normalize("") :
+		(() => {throw new Error(`Unsupported platform ${process.platform}`)})();
+	let configPath = path.join(mindustryDirectory, "launcher");
 	if(!fs.existsSync(path.join(configPath, "config.json"))){
 		log("No config.json file found, creating one. If this is your first launch, this is fine.");
 		if(!fs.existsSync(configPath)){
@@ -544,7 +549,7 @@ function init(processArgs:string[]): [Settings, string] {
 	let filePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
 	return [settings, filePath.replace(/%[^ %]+%/g, (text:string) => 
 		process.env[text.split("%")[1]] ?? text
-	)];
+	), mindustryDirectory];
 }
 
 function updateLauncher():Promise<number>{ return new Promise((resolve, reject) => {
@@ -612,8 +617,8 @@ ${err.stderr.toString()}`
 function main(processArgs:typeof process.argv):number {
 	//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 
-	let filePath:string;
-	[settings, filePath] = init(processArgs);
+	let filePath:string, mindustryDirectory:string;
+	[settings, filePath, mindustryDirectory] = init(processArgs);
 
 	if("help" in parsedArgs){
 		console.log(
@@ -663,8 +668,8 @@ function main(processArgs:typeof process.argv):number {
 					if(code == 0){
 						log("Compiled succesfully.");
 						filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
-						if("buildMods" in parsedArgs) copyMods();
-						launch(filePath);
+						if("buildMods" in parsedArgs) copyMods(path.join(mindustryDirectory, "mods"));
+						launch(filePath, false, mindustryDirectory);
 					} else {
 						error("Compiling failed.");
 						process.exit(1);
@@ -679,13 +684,13 @@ function main(processArgs:typeof process.argv):number {
 					return 1;
 				}
 				filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
-				if("buildMods" in parsedArgs) copyMods();
-				launch(filePath);
+				if("buildMods" in parsedArgs) copyMods(path.join(mindustryDirectory, "mods"));
+				launch(filePath, false, mindustryDirectory);
 			}
 			
 		} else {
-			if("buildMods" in parsedArgs) copyMods();
-			launch(filePath);
+			if("buildMods" in parsedArgs) copyMods(path.join(mindustryDirectory, "mods"));
+			launch(filePath, false, mindustryDirectory);
 		}
 	} else {
 		log("Please specify a version to launch.");

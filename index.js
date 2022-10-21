@@ -224,7 +224,7 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
     });
     return proc;
 }
-function restart(_filePath, _jvmArgs, build, compile) {
+function restart(_filePath, _jvmArgs, build, compile, mindustryDirectory) {
     if (build && compile) {
         error("How were you able to trigger a rebuild and a recompile at the same time? Restarting...");
     }
@@ -240,13 +240,13 @@ function restart(_filePath, _jvmArgs, build, compile) {
     mindustryProcess.removeAllListeners();
     mindustryProcess.kill("SIGTERM"); //todo see if this causes issues
     if (build)
-        copyMods();
+        copyMods(path.join(mindustryDirectory, "mods"));
     if (compile)
         error("Compiling mods on restart is not yet implemented because this bit of code doesn't know what to compile");
     mindustryProcess = startProcess(_filePath, _jvmArgs, mindustryArgs);
     log("Started new process.");
 }
-function copyMods() {
+function copyMods(modsDirectory) {
     for (let file of settings.externalMods) {
         if (!fs.existsSync(file)) {
             error(`Mod "${file}" does not exist.`);
@@ -268,7 +268,7 @@ function copyMods() {
                 log(`Built ${file} in ${timeTaken.toFixed(0)}ms`);
                 let modFile = fs.readdirSync(path.join(file, "build", "libs"))[0];
                 let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                fs.copyFileSync(path.join(file, "build", "libs", modFile), path.join(process.env["appdata"], "Mindustry", "mods", modName + ".jar"));
+                fs.copyFileSync(path.join(file, "build", "libs", modFile), path.join(modsDirectory, modName + ".jar"));
             }
             else {
                 log(`Copying mod directory "${file}"`);
@@ -390,7 +390,7 @@ async function handleDownload(version) {
         log("Exiting.");
     }
 }
-function launch(filePath, recursive) {
+function launch(filePath, recursive, mindustryDirectory) {
     try {
         fs.accessSync(filePath, fs.constants.R_OK);
     }
@@ -405,7 +405,7 @@ function launch(filePath, recursive) {
             handleDownload(parsedArgs["version"])
                 .then((worked) => {
                 if (worked) {
-                    launch(filePath, true);
+                    launch(filePath, true, mindustryDirectory);
                 }
             });
         }
@@ -420,15 +420,15 @@ function launch(filePath, recursive) {
         switch (data.toString("utf-8").slice(0, -2)) { //Input minus the \r\n at the end.
             case "rs":
             case "restart":
-                restart(filePath, settings.jvmArgs, false, false);
+                restart(filePath, settings.jvmArgs, false, false, mindustryDirectory);
                 break;
             case "rb":
             case "rebuild":
-                restart(filePath, settings.jvmArgs, true, false);
+                restart(filePath, settings.jvmArgs, true, false, mindustryDirectory);
                 break;
             case "rc":
             case "recompile":
-                restart(filePath, settings.jvmArgs, false, true);
+                restart(filePath, settings.jvmArgs, false, true, mindustryDirectory);
                 break;
             case "?":
             case "help":
@@ -450,7 +450,7 @@ function launch(filePath, recursive) {
             let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filePath;
             fs.watchFile(file, () => {
                 log(`File change detected! (${file})`);
-                restart(filePath, settings.jvmArgs, true, false);
+                restart(filePath, settings.jvmArgs, true, false, mindustryDirectory);
             });
         }
     }
@@ -459,7 +459,11 @@ function init(processArgs) {
     process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep));
     [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
     //check settings
-    let configPath = path.join(process.env["APPDATA"], "Mindustry/launcher/");
+    let mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
+        process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") :
+            process.platform == "linux" ? path.normalize("") :
+                (() => { throw new Error(`Unsupported platform ${process.platform}`); })();
+    let configPath = path.join(mindustryDirectory, "launcher");
     if (!fs.existsSync(path.join(configPath, "config.json"))) {
         log("No config.json file found, creating one. If this is your first launch, this is fine.");
         if (!fs.existsSync(configPath)) {
@@ -489,7 +493,7 @@ function init(processArgs) {
     let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
     let filePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
-    return [settings, filePath.replace(/%[^ %]+%/g, (text) => process.env[text.split("%")[1]] ?? text)];
+    return [settings, filePath.replace(/%[^ %]+%/g, (text) => process.env[text.split("%")[1]] ?? text), mindustryDirectory];
 }
 function updateLauncher() {
     return new Promise((resolve, reject) => {
@@ -558,8 +562,8 @@ ${err.stderr.toString()}`);
 ;
 function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
-    let filePath;
-    [settings, filePath] = init(processArgs);
+    let filePath, mindustryDirectory;
+    [settings, filePath, mindustryDirectory] = init(processArgs);
     if ("help" in parsedArgs) {
         console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
 
@@ -612,8 +616,8 @@ function main(processArgs) {
                         log("Compiled succesfully.");
                         filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
                         if ("buildMods" in parsedArgs)
-                            copyMods();
-                        launch(filePath);
+                            copyMods(path.join(mindustryDirectory, "mods"));
+                        launch(filePath, false, mindustryDirectory);
                     }
                     else {
                         error("Compiling failed.");
@@ -631,14 +635,14 @@ function main(processArgs) {
                 }
                 filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
                 if ("buildMods" in parsedArgs)
-                    copyMods();
-                launch(filePath);
+                    copyMods(path.join(mindustryDirectory, "mods"));
+                launch(filePath, false, mindustryDirectory);
             }
         }
         else {
             if ("buildMods" in parsedArgs)
-                copyMods();
-            launch(filePath);
+                copyMods(path.join(mindustryDirectory, "mods"));
+            launch(filePath, false, mindustryDirectory);
         }
     }
     else {
