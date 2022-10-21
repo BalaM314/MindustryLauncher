@@ -6,13 +6,14 @@ A custom launcher for Mindustry built with TypeScript and Node.
 * [x] Logging
 * [x] Version selection
 * [x] Automatic version download
-* [x] Automatically copies external mods on file update and relaunches
+* [x] Build and copy external mods (configurable)
+* [x] Restart automatically on mod file change (configurable)
 * [x] Relaunch on command
 * [x] Highly configurable
 * [x] Open source
-* [x] Optionally compile before launching
+* [x] Compile a source directory before launching or when restarting (configurable)
 * [x] Output highlighting
-* [x] Optionally remove username from logs
+* [x] Remove username from logs (configurable)
 
 ## Installation
 
