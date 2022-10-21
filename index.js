@@ -456,7 +456,7 @@ function init(processArgs) {
     //Change working directory to the same as this program's index.js file
     process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep));
     //Parse arguments
-    let [parsedArgs, mindustryArgs] = parseArgs(processArgs.slice(2));
+    let [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
     //check settings
     let mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
         process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") :
@@ -507,8 +507,8 @@ function init(processArgs) {
         modsDirectory,
         username,
         parsedArgs,
-        mindustryArgs: settings.processArgs.concat(mindustryArgs),
-        jvmArgs: settings.jvmArgs
+        mindustryArgs: settings.processArgs,
+        jvmArgs: settings.jvmArgs.concat(jvmArgs)
     };
 }
 function updateLauncher() {
