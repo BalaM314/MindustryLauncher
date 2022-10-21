@@ -11,12 +11,12 @@
  * If not, see <https://www.gnu.org/licenses/>.
  *
  */
+import { execSync, spawn } from "child_process";
 import * as fs from "fs";
-import { spawn, execSync } from "child_process";
-import * as readline from "readline";
 import * as https from "https";
-import { Stream } from "stream";
 import * as path from "path";
+import * as readline from "readline";
+import { Stream } from "stream";
 const ANSIEscape = {
     "red": `\u001b[0;31m`,
     "yellow": `\u001b[0;93m`,
@@ -30,6 +30,11 @@ const ANSIEscape = {
     "reset": `\u001b[0m`,
     "brightpurple": `\u001b[0;95m`
 };
+let parsedArgs;
+let mindustryArgs;
+let settings;
+let mindustryProcess;
+let currentLogStream;
 function log(message) {
     console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
@@ -110,11 +115,22 @@ async function askYesOrNo(query) {
     let response = await askQuestion(query);
     return response == "y" || response == "yes";
 }
-let parsedArgs;
-let mindustryArgs;
-let settings;
-let mindustryProcess;
-let currentLogStream;
+function copyDirectory(source, destination) {
+    fs.mkdirSync(destination, { recursive: true });
+    fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
+        let sourcePath = path.join(source, entry.name);
+        let destinationPath = path.join(destination, entry.name);
+        entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
+    });
+}
+function parseJSONC(data) {
+    return JSON.parse(data.split("\n")
+        .filter(line => !/^[ \t]*\/\//.test(line))
+        //Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
+        .map(line => line.replace(/\*.*?\*/g, ""))
+        //Removes "multiline" comments.
+        .join("\n"));
+}
 function parseArgs(args) {
     //Parses arguments into a useable format.
     let parsedArgs = {};
@@ -141,8 +157,25 @@ function parseArgs(args) {
     }
     return [parsedArgs, mindustryArgs];
 }
+function downloadFile(url, output) {
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            if (res.statusCode == 404) {
+                reject(`File does not exist.`);
+            }
+            else if (res.statusCode != 200) {
+                reject(`Expected status code 200, got ${res.statusCode}`);
+            }
+            const file = fs.createWriteStream(output);
+            res.pipe(file);
+            file.on('finish', () => {
+                file.close();
+                resolve("File downloaded!");
+            });
+        });
+    });
+}
 function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
-    copyMods();
     const proc = spawn("java", [..._jvmArgs, `-jar`, _filePath, ...settings.processArgs, ..._mindustryArgs]);
     const d = new Date();
     const username = process.env["USERNAME"] ?? process.env["USER"] ?? (() => {
@@ -180,12 +213,36 @@ function startProcess(_filePath, _jvmArgs, _mindustryArgs) {
             .pipe(new LoggerHighlightTransform())
             .pipe(process.stderr);
     }
+    proc.on("exit", (statusCode) => {
+        if (statusCode == 0) {
+            log("Process exited.");
+        }
+        else {
+            log(`Process crashed with exit code ${statusCode}!`);
+        }
+        process.exit();
+    });
     return proc;
 }
-function restart(_filePath, _jvmArgs) {
-    log("Restarting!");
+function restart(_filePath, _jvmArgs, build, compile) {
+    if (build && compile) {
+        error("How were you able to trigger a rebuild and a recompile at the same time? Restarting...");
+    }
+    else if (build) {
+        log("Rebuilding mods and restarting...");
+    }
+    else if (compile) {
+        log("Recompiling client...");
+    }
+    else {
+        log("Restarting...");
+    }
     mindustryProcess.removeAllListeners();
     mindustryProcess.kill("SIGTERM"); //todo see if this causes issues
+    if (build)
+        copyMods();
+    if (compile)
+        error("Compiling mods on restart is not yet implemented because this bit of code doesn't know what to compile");
     mindustryProcess = startProcess(_filePath, _jvmArgs, mindustryArgs);
     log("Started new process.");
 }
@@ -197,17 +254,18 @@ function copyMods() {
         }
         if (fs.lstatSync(file).isDirectory()) {
             if (fs.existsSync(path.join(file, "build.gradle"))) {
-                log(`Copying ${("buildmods" in parsedArgs) ? "and building " : ""}java mod directory "${file}"`);
-                if (("buildmods" in parsedArgs)) {
-                    try {
-                        execSync("gradlew jar", {
-                            cwd: file
-                        });
-                    }
-                    catch (err) {
-                        throw `Build failed!`;
-                    }
+                log(`Copying and building java mod directory "${file}"`);
+                const preBuildTime = Date.now();
+                try {
+                    execSync("gradlew jar", {
+                        cwd: file
+                    });
                 }
+                catch (err) {
+                    throw `Build failed!`;
+                }
+                const timeTaken = Date.now() - preBuildTime;
+                log(`Built ${file} in ${timeTaken.toFixed(0)}ms`);
                 let modFile = fs.readdirSync(path.join(file, "build", "libs"))[0];
                 let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
                 fs.copyFileSync(path.join(file, "build", "libs", modFile), path.join(process.env["appdata"], "Mindustry", "mods", modName + ".jar"));
@@ -218,48 +276,16 @@ function copyMods() {
             }
         }
         else {
-            log(`Copying modfile "${file}"`);
-            let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=(Desktop)?\.(jar)|(zip)$)/i); //hello regex my old friend
-            if (modname == null)
+            let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=((Desktop)?\.(jar))|(zip)$)/i); //hello regex my old friend
+            if (modname == null) {
                 error(`Invalid mod filename ${file}!`);
-            else
-                fs.copyFileSync(file, `${process.env["appdata"]}\\Mindustry\\mods\\${modname[0]}.jar`);
+            }
+            else {
+                log(`Copying modfile "${file}"`);
+                fs.copyFileSync(file, `${process.env["appdata"]}\\Mindustry\\mods\\${modname[0]}.jar`); //TODO refactor this section, it won't work on .zip files
+            }
         }
     }
-}
-function copyDirectory(source, destination) {
-    fs.mkdirSync(destination, { recursive: true });
-    fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
-        let sourcePath = path.join(source, entry.name);
-        let destinationPath = path.join(destination, entry.name);
-        entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
-    });
-}
-function parseJSONC(data) {
-    return JSON.parse(data.split("\n")
-        .filter(line => !/^[ \t]*\/\//.test(line))
-        //Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
-        .map(line => line.replace(/\*.*?\*/g, ""))
-        //Removes "multiline" comments.
-        .join("\n"));
-}
-function downloadFile(url, output) {
-    return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
-            if (res.statusCode == 404) {
-                reject(`File does not exist.`);
-            }
-            else if (res.statusCode != 200) {
-                reject(`Expected status code 200, got ${res.statusCode}`);
-            }
-            const file = fs.createWriteStream(output);
-            res.pipe(file);
-            file.on('finish', () => {
-                file.close();
-                resolve("File downloaded!");
-            });
-        });
-    });
 }
 function resolveRedirect(url) {
     return new Promise((resolve, reject) => {
@@ -394,7 +420,15 @@ function launch(filePath, recursive) {
         switch (data.toString("utf-8").slice(0, -2)) { //Input minus the \r\n at the end.
             case "rs":
             case "restart":
-                restart(filePath, settings.jvmArgs);
+                restart(filePath, settings.jvmArgs, false, false);
+                break;
+            case "rb":
+            case "rebuild":
+                restart(filePath, settings.jvmArgs, true, false);
+                break;
+            case "rc":
+            case "recompile":
+                restart(filePath, settings.jvmArgs, false, true);
                 break;
             case "?":
             case "help":
@@ -411,22 +445,14 @@ function launch(filePath, recursive) {
                 break;
         }
     });
-    mindustryProcess.on("exit", (statusCode) => {
-        if (statusCode == 0) {
-            log("Process exited.");
+    if (settings.restartAutomaticallyOnModUpdate) {
+        for (let filepath of settings.externalMods) {
+            let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filePath;
+            fs.watchFile(file, () => {
+                log(`File change detected! (${file})`);
+                restart(filePath, settings.jvmArgs, true, false);
+            });
         }
-        else {
-            log(`Process crashed with exit code ${statusCode}!`);
-        }
-        process.exit();
-    });
-    for (let filepath of settings.externalMods) {
-        let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filePath;
-        fs.watchFile(file, () => {
-            log(`File change detected! (${file})`);
-            if (settings.restartAutomaticallyOnModUpdate)
-                restart(filePath, settings.jvmArgs);
-        });
     }
 }
 function init(processArgs) {
@@ -559,7 +585,7 @@ function main(processArgs) {
             error("Update failed due to an error!");
             error(err);
         });
-        return 0;
+        return -1;
     }
     if ("version" in parsedArgs) {
         if (filePath.match(/[/\\]$/i)) {
@@ -576,15 +602,17 @@ function main(processArgs) {
                     cwd: filePath
                 });
                 gradleProcess.stdout
-                    .pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+                    .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
                     .pipe(process.stdout);
                 gradleProcess.stderr
-                    .pipe(new (prependTextTransform(() => `${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+                    .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
                     .pipe(process.stderr);
                 gradleProcess.on("exit", (code) => {
                     if (code == 0) {
                         log("Compiled succesfully.");
                         filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
+                        if ("buildMods" in parsedArgs)
+                            copyMods();
                         launch(filePath);
                     }
                     else {
@@ -602,10 +630,14 @@ function main(processArgs) {
                     return 1;
                 }
                 filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
+                if ("buildMods" in parsedArgs)
+                    copyMods();
                 launch(filePath);
             }
         }
         else {
+            if ("buildMods" in parsedArgs)
+                copyMods();
             launch(filePath);
         }
     }
