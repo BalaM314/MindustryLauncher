@@ -44,6 +44,9 @@ function error(message) {
 function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
 }
+function fatal(message) {
+    throw new Error(message);
+}
 function getLogHighlight(char) {
     switch (char) {
         case "I":
@@ -262,7 +265,7 @@ function copyMods(modsDirectory) {
                     });
                 }
                 catch (err) {
-                    throw `Build failed!`;
+                    fatal(`Build failed!`);
                 }
                 const timeTaken = Date.now() - preBuildTime;
                 log(`Built ${file} in ${timeTaken.toFixed(0)}ms`);
@@ -462,7 +465,7 @@ function init(processArgs) {
     let mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
         process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") :
             process.platform == "linux" ? path.normalize("") :
-                (() => { throw new Error(`Unsupported platform ${process.platform}`); })();
+                fatal(`Unsupported platform ${process.platform}`);
     let configPath = path.join(mindustryDirectory, "launcher");
     if (!fs.existsSync(path.join(configPath, "config.json"))) {
         log("No config.json file found, creating one. If this is your first launch, this is fine.");
