@@ -30,7 +30,10 @@
 	"externalMods": [
 		//List of external mods to copy into the mods folder automatically when the file changes.
 	],
+	//Will restart Mindustry whenever a mod file changes. May be very annoying. May cause you to lose progress in a world.
 	"restartAutomaticallyOnModUpdate": false,
+	//Whether to watch the entire java mod directory instead of just the built jar.
+	"watchWholeJavaModDirectory": false,
 	"logging": {
 		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
 		"path": "C:\\Mindustry\\logs\\",
