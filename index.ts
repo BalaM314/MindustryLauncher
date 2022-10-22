@@ -348,17 +348,18 @@ function copyMods(state:State){
 				log(`Copying java mod directory "${mod.path}"`);
 			}
 			
-			let modFile = fs.readdirSync(path.join(mod.path, "build", "libs"))[0];
-			if(!fs.existsSync(modFile)){
+			const modFileName = fs.readdirSync(path.join(mod.path, "build", "libs"))[0];
+			const modFilePath = path.join(mod.path, "build", "libs", modFileName);
+			if(!fs.existsSync(modFilePath)){
 				if(state.buildMods){
 					error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying.`)
 				} else {
 					error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. This may be because the mod has not been built yet. Run "gradlew jar" to build the mod, or specify --buildMods.`);
 				}
 			} else {
-				let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+				let modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
 				fs.copyFileSync(
-					path.join(mod.path, "build", "libs", modFile),
+					modFilePath,
 					path.join(state.modsDirectory, modName + ".jar")
 				);
 			}

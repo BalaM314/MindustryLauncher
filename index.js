@@ -270,8 +270,9 @@ function copyMods(state) {
             else {
                 log(`Copying java mod directory "${mod.path}"`);
             }
-            let modFile = fs.readdirSync(path.join(mod.path, "build", "libs"))[0];
-            if (!fs.existsSync(modFile)) {
+            const modFileName = fs.readdirSync(path.join(mod.path, "build", "libs"))[0];
+            const modFilePath = path.join(mod.path, "build", "libs", modFileName);
+            if (!fs.existsSync(modFilePath)) {
                 if (state.buildMods) {
                     error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying.`);
                 }
@@ -280,8 +281,8 @@ function copyMods(state) {
                 }
             }
             else {
-                let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                fs.copyFileSync(path.join(mod.path, "build", "libs", modFile), path.join(state.modsDirectory, modName + ".jar"));
+                let modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+                fs.copyFileSync(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
             }
         }
         else if (mod.type == "dir") {
