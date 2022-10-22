@@ -242,54 +242,60 @@ function restart(state, build, compile) {
     }
     state.mindustryProcess?.removeAllListeners();
     state.mindustryProcess?.kill("SIGTERM"); //todo see if this causes issues
-    if (build)
-        copyMods(state);
+    state.buildMods = build;
+    copyMods(state);
     if (compile)
         error("Compiling client on restart is not yet implemented because this bit of code doesn't know what to compile");
     state.mindustryProcess = startProcess(state);
     log("Started new process.");
 }
 function copyMods(state) {
-    for (let modPath of state.settings.externalMods) {
-        if (!fs.existsSync(modPath)) {
-            error(`Mod "${modPath}" does not exist.`);
-            continue;
-        }
-        if (fs.lstatSync(modPath).isDirectory()) {
-            if (fs.existsSync(path.join(modPath, "build.gradle"))) {
-                //If build.gradle exists, this must be a java mod
-                log(`Copying and building java mod directory "${modPath}"`);
+    for (let mod of state.externalMods) {
+        if (mod.type == "java") {
+            //Maybe build the directory
+            if (state.buildMods) {
+                log(`Building and copying java mod directory "${mod.path}"`);
                 const preBuildTime = Date.now();
                 try {
                     execSync("gradlew jar", {
-                        cwd: modPath
+                        cwd: mod.path
                     });
                 }
                 catch (err) {
                     fatal(`Build failed!`);
                 }
                 const timeTaken = Date.now() - preBuildTime;
-                log(`Built ${modPath} in ${timeTaken.toFixed(0)}ms`);
-                let modFile = fs.readdirSync(path.join(modPath, "build", "libs"))[0];
-                let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                fs.copyFileSync(path.join(modPath, "build", "libs", modFile), path.join(state.modsDirectory, modName + ".jar"));
+                log(`Built "${path.basename(mod.path)}" in ${timeTaken.toFixed(0)}ms`);
             }
             else {
-                //Otherwise, we can just copy the whole directory
-                log(`Copying mod directory "${modPath}"`);
-                copyDirectory(modPath, path.join(state.modsDirectory, modPath.split(/[\/\\]/).at(-1))); //TODO error handle
+                log(`Copying java mod directory "${mod.path}"`);
+            }
+            let modFile = fs.readdirSync(path.join(mod.path, "build", "libs"))[0];
+            if (!fs.existsSync(modFile)) {
+                if (state.buildMods) {
+                    error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying.`);
+                }
+                else {
+                    error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. This may be because the mod has not been built yet. Run "gradlew jar" to build the mod, or specify --buildMods.`);
+                }
+            }
+            else {
+                let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+                fs.copyFileSync(path.join(mod.path, "build", "libs", modFile), path.join(state.modsDirectory, modName + ".jar"));
             }
         }
-        else {
-            //The mod is a file, so just copy it
-            let modname = modPath.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=((Desktop)?\.(jar))|(zip)$)/i); //hello regex my old friend
-            if (modname == null) {
-                error(`Invalid mod filename ${modPath}!`);
-            }
-            else {
-                log(`Copying modfile "${modPath}"`);
-                fs.copyFileSync(modPath, path.join(state.modsDirectory, `${modname[0]}.jar`)); //TODO refactor this section, it won't work on .zip files
-            }
+        else if (mod.type == "dir") {
+            //Copy the whole directory
+            log(`Copying mod directory "${mod.path}"`);
+            copyDirectory(mod.path, path.join(state.modsDirectory, path.basename(mod.path)));
+        }
+        else if (mod.type == "file") {
+            //Copy the mod file
+            let modname = path.basename(mod.path).split(".").slice(0, -1).join(".");
+            if (modname == "")
+                modname = path.basename(mod.path);
+            log(`Copying modfile "${mod.path}"`);
+            fs.copyFileSync(mod.path, path.join(state.modsDirectory, modname[0] + path.extname(mod.path)));
         }
     }
 }
@@ -452,13 +458,24 @@ function launch(state, recursive) {
         }
     });
     if (state.settings.restartAutomaticallyOnModUpdate) {
-        for (let filepath of state.settings.externalMods) {
-            let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filepath;
+        for (const mod of state.externalMods) {
+            //let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filepath;
             //TODO this handling seems wrong
-            fs.watchFile(file, () => {
-                log(`File change detected! (${file})`);
-                restart(state, true, false);
-            });
+            if (mod.type == "file")
+                fs.watchFile(mod.path, () => {
+                    log(`File change detected! (${mod.path})`);
+                    restart(state, true, false);
+                });
+            else if (mod.type == "dir")
+                fs.watchFile(mod.path, () => {
+                    log(`File change detected! (${mod.path})`);
+                    restart(state, true, false);
+                });
+            else if (mod.type == "java")
+                fs.watchFile(state.settings.watchWholeJavaModDirectory ? mod.path : path.join(mod.path, "build/libs"), () => {
+                    log(`File change detected! (${mod.path})`);
+                    restart(state, true, false);
+                });
         }
     }
 }
@@ -494,8 +511,7 @@ function init(processArgs) {
     let settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8"));
     for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
-            error(`Jar name for version ${version} contains a space.`);
-            process.exit(1);
+            fatal(`Jar name for version ${version} contains a space.`);
         }
     }
     if (username == null && settings.logging.removeUsername) {
@@ -506,6 +522,14 @@ function init(processArgs) {
         error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
         process.exit(1);
     }
+    let externalMods = settings.externalMods.map(modPath => ({
+        path: modPath,
+        type: fs.existsSync(modPath) ?
+            fs.lstatSync(modPath).isDirectory() ?
+                fs.existsSync(path.join(modPath, "build.gradle")) ? "java" : "dir"
+                : "file"
+            : fatal(`External mod "${modPath}" does not exist.`)
+    }));
     //Use the custom version name, but if it doesnt exist use "v${version}.jar";
     let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
@@ -522,7 +546,9 @@ function init(processArgs) {
         username,
         parsedArgs,
         mindustryArgs: settings.processArgs,
-        jvmArgs: settings.jvmArgs.concat(jvmArgs)
+        jvmArgs: settings.jvmArgs.concat(jvmArgs),
+        externalMods,
+        buildMods: "buildMods" in parsedArgs
     };
 }
 function updateLauncher() {
@@ -644,8 +670,7 @@ function main(processArgs) {
                     if (code == 0) {
                         log("Compiled succesfully.");
                         state.jarFilePath = path.join(state.jarFilePath, "desktop/build/libs/Mindustry.jar");
-                        if ("buildMods" in state.parsedArgs)
-                            copyMods(state);
+                        copyMods(state);
                         launch(state, false);
                     }
                     else {
@@ -663,14 +688,12 @@ function main(processArgs) {
                     return 1;
                 }
                 state.jarFilePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
-                if ("buildMods" in state.parsedArgs)
-                    copyMods(state);
+                copyMods(state);
                 launch(state, false);
             }
         }
         else {
-            if ("buildMods" in state.parsedArgs)
-                copyMods(state);
+            copyMods(state);
             launch(state, false);
         }
     }
