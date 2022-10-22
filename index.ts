@@ -67,7 +67,6 @@ interface State {
 }
 
 
-
 const ANSIEscape = {
 	"red": `\u001b[0;31m`,
 	"yellow": `\u001b[0;93m`,
@@ -95,6 +94,7 @@ function log(message:string){
 function error(message:string){
 	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}`);
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function debug(message:string){
 	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
 }
@@ -140,14 +140,14 @@ function streamTransform(transformFunction: (text:string, chunkIndex:number) => 
 			callback(
 				null,
 				lines
-				.slice(0, -1)
-				.map(line => line + "\n")
-				.map(transformFunction)
-				.join("")
+					.slice(0, -1)
+					.map(line => line + "\n")
+					.map(transformFunction)
+					.join("")
 			);
 			this._line = lines.at(-1)!;
 		}
-	}
+	};
 }
 
 const LoggerHighlightTransform = streamTransform(
@@ -180,7 +180,7 @@ function askQuestion(query:string):Promise<string> {
 }
 
 async function askYesOrNo(query:string):Promise<boolean> {
-	let response = await askQuestion(query);
+	const response = await askQuestion(query);
 	return response == "y" || response == "yes";
 }
 
@@ -188,8 +188,8 @@ async function askYesOrNo(query:string):Promise<boolean> {
 function copyDirectory(source:string, destination:string) {
 	fs.mkdirSync(destination, {recursive: true});
 	fs.readdirSync(source, {withFileTypes: true}).forEach(entry => {
-		let sourcePath = path.join(source, entry.name);
-		let destinationPath = path.join(destination, entry.name);
+		const sourcePath = path.join(source, entry.name);
+		const destinationPath = path.join(destination, entry.name);
 
 		entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
 	});
@@ -208,13 +208,13 @@ function parseJSONC(data:string) {
 /**Parses arguments into a useable format. */
 function parseArgs(args: string[]): [parsedArgs: {[index: string]: string;}, mindustryArgs: string[]]{
 	
-	let parsedArgs: {
+	const parsedArgs: {
 		[index: string]: string;
 	} = {};
 	let argName:string = "null";
-	let mindustryArgs = [];
+	const mindustryArgs = [];
 	let mode = 0;
-	for (let arg of args) {
+	for (const arg of args) {
 		if(arg == "--"){
 			//The remaining args need to be sent to the JVM.
 			mode = 1;
@@ -275,7 +275,7 @@ function startProcess(state:State){
 				.pipe(state.currentLogStream);
 		else
 			proc.stdout
-			.pipe(new (prependTextTransform(() => getTimeComponent(false))))
+				.pipe(new (prependTextTransform(() => getTimeComponent(false))))
 				.pipe(state.currentLogStream);
 	}
 	if(state.settings.logging.removeUsername && state.username != null){
@@ -329,7 +329,7 @@ function restart(state:State, build:boolean, compile:boolean){
 }
 
 function copyMods(state:State){
-	for(let mod of state.externalMods){
+	for(const mod of state.externalMods){
 		if(mod.type == "java"){
 			//Maybe build the directory
 			if(state.buildMods){
@@ -352,12 +352,12 @@ function copyMods(state:State){
 			const modFilePath = path.join(mod.path, "build", "libs", modFileName);
 			if(!fs.existsSync(modFilePath)){
 				if(state.buildMods){
-					error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying.`)
+					error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying.`);
 				} else {
 					error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. This may be because the mod has not been built yet. Run "gradlew jar" to build the mod, or specify --buildMods.`);
 				}
 			} else {
-				let modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+				const modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
 				fs.copyFileSync(
 					modFilePath,
 					path.join(state.modsDirectory, modName + ".jar")
@@ -406,13 +406,13 @@ function getPathOfVersion(version:string):Promise<string> {
 				.catch(error => reject(error));
 		} else if(version.match(/(?<=^foo-)\d+$/i)){
 			//Foo version
-			let versionNumber = version.match(/(?<=^foo-)\d+$/i)![0]!;
+			const versionNumber = version.match(/(?<=^foo-)\d+$/i)![0]!;
 			resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
 				.then(response => resolve(response))
 				.catch(error => reject(error));
 		} else if(version.match(/(?<=be-)\d+$/i)){
 			//Bleeding edge version
-			let versionNumber = version.match(/(?<=be-)\d+$/i)![0]!;
+			const versionNumber = version.match(/(?<=be-)\d+$/i)![0]!;
 			resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
 				.then(response => resolve(response))
 				.catch(error => reject(error));
@@ -422,7 +422,7 @@ function getPathOfVersion(version:string):Promise<string> {
 					reject(`Error: Expected status 302, got ${res.statusCode}`);
 				}
 				if(res.headers.location){
-					let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+					const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
 					if(!versionNumber){
 						reject(`Error: Server responded with invalid redirect location.`);
 					}
@@ -439,7 +439,7 @@ function getPathOfVersion(version:string):Promise<string> {
 					reject(`Error: Expected status 302, got ${res.statusCode}`);
 				}
 				if(res.headers.location){
-					let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+					const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
 					if(!versionNumber){
 						reject(`Error: Server responded with invalid redirect location.`);
 					}
@@ -458,8 +458,8 @@ async function handleDownload(state:State){
 
 	if(await askYesOrNo("Would you like to download the file? [y/n]:")){
 		try {
-			log("Resolving version...")
-			let downloadPath = await getPathOfVersion(state.parsedArgs["version"]);
+			log("Resolving version...");
+			const downloadPath = await getPathOfVersion(state.parsedArgs["version"]);
 			
 			log("Downloading...");
 			log("There's no status bar so you just have to trust me.");
@@ -467,7 +467,11 @@ async function handleDownload(state:State){
 			log("Done!");
 		} catch(err){
 			error("An error occured while downloading the file: ");
-			error(err as any);
+			if(err instanceof Error){
+				error(err.message);
+			} else {
+				console.error(err);
+			}
 			return false;
 		}
 		return true;
@@ -486,11 +490,11 @@ function launch(state:State, recursive:boolean){
 			error("Wait what? I just downloaded that.");
 			error("Please contact BalaM314 by filing an issue on Github.");
 		} else {
-			error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.")
+			error("If you have this version downloaded, check the config.json file to see if the specified filename is correct.");
 			handleDownload(state)
 				.then((worked) => {
 					if(worked){
-						launch(state, true)
+						launch(state, true);
 					}
 				});
 		}
@@ -523,6 +527,7 @@ function launch(state:State, recursive:boolean){
 				state.mindustryProcess?.removeAllListeners();
 				state.mindustryProcess?.kill("SIGTERM");
 				process.exit(0);
+				break;
 			default:
 				log("Unknown command.");
 				break;
@@ -560,17 +565,17 @@ function init(processArgs:string[]):State {
 	process.chdir(process.argv[1].split(path.sep).slice(0,-1).join(path.sep)); //Use of process.argv is necessary to grab the "hidden" argument to `node`
 
 	//Parse arguments
-	let [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
+	const [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
 
 	//Get a bunch of static things
-	let mindustryDirectory =
+	const mindustryDirectory =
 	process.platform == "win32" ? path.join(process.env["APPDATA"]!, "Mindustry/") :
 		process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") : 
-		process.platform == "linux" ? path.normalize("") :
-		fatal(`Unsupported platform ${process.platform}`);
-	let modsDirectory = path.join(mindustryDirectory, "mods");
-	let launcherDataPath = path.join(mindustryDirectory, "launcher");
-	let username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
+			process.platform == "linux" ? path.normalize("") :
+				fatal(`Unsupported platform ${process.platform}`);
+	const modsDirectory = path.join(mindustryDirectory, "mods");
+	const launcherDataPath = path.join(mindustryDirectory, "launcher");
+	const username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
 
 	//if settings file doesn't exist, 
 	if(!fs.existsSync(path.join(launcherDataPath, "config.json"))){
@@ -587,9 +592,9 @@ function init(processArgs:string[]):State {
 		}
 	}
 	
-	let settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8")) as Settings;
+	const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8")) as Settings;
 
-	for(let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)){
+	for(const [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)){
 		if(jarName.includes(" ")){
 			fatal(`Jar name for version ${version} contains a space.`);
 		}
@@ -605,7 +610,7 @@ function init(processArgs:string[]):State {
 		process.exit(1);
 	}
 
-	let externalMods = settings.externalMods.map(modPath => ({
+	const externalMods = settings.externalMods.map(modPath => ({
 		path: modPath,
 		type: fs.existsSync(modPath) ?
 			fs.lstatSync(modPath).isDirectory() ?
@@ -615,7 +620,7 @@ function init(processArgs:string[]):State {
 	}));
 
 	//Use the custom version name, but if it doesnt exist use "v${version}.jar";
-	let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
+	const jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
 	//If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
 	let jarFilePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
 	jarFilePath = jarFilePath.replace(/%[^ %]+?%/g, (text:string) => 
@@ -666,44 +671,43 @@ ${err.stderr.toString()}`
 		pull();
 		resolve(0);
 	} catch(err){
-		let errorMessage = (err as SpawnSyncReturns<Buffer>).stderr.toString();
-		let outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
+		const errorMessage = (err as SpawnSyncReturns<Buffer>).stderr.toString();
+		const outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
 		if(outputMessage.includes("Merge conflict")){
 			execSync("git merge --abort");
 			reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
 		} else if(errorMessage.includes("commit your changes")){
 			askYesOrNo(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:`)
-			.then(response => {
-				if(response){
-					try {
-						commitChanges();
-						pull();
-						resolve(0);
-					} catch(err){
-						let outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
-						if(outputMessage.includes("Merge conflict")){
-							execSync("git merge --abort");
-							reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
-						} else {
-							fatalError(err as SpawnSyncReturns<Buffer>);
+				.then(response => {
+					if(response){
+						try {
+							commitChanges();
+							pull();
+							resolve(0);
+						} catch(err){
+							const outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
+							if(outputMessage.includes("Merge conflict")){
+								execSync("git merge --abort");
+								reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
+							} else {
+								fatalError(err as SpawnSyncReturns<Buffer>);
+							}
 						}
+					} else {
+						resolve(1);
 					}
-				} else {
-					resolve(1);
-				}
-			});
+				});
 		} else {
-			fatalError(err as SpawnSyncReturns<Buffer>)
+			fatalError(err as SpawnSyncReturns<Buffer>);
 		}
 	}
 
-	});
-};
+});}
 
 function main(processArgs:typeof process.argv):number {
 	//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 
-	let state = init(processArgs);
+	const state = init(processArgs);
 
 	if("help" in state.parsedArgs){
 		console.log(
@@ -740,7 +744,7 @@ function main(processArgs:typeof process.argv):number {
 					return 1;
 				}
 				log("Compiling...");
-				let gradleProcess = spawn(`${state.jarFilePath}/gradlew.bat`, ["desktop:dist"], {
+				const gradleProcess = spawn(`${state.jarFilePath}/gradlew.bat`, ["desktop:dist"], {
 					cwd: state.jarFilePath
 				});
 				gradleProcess.stdout

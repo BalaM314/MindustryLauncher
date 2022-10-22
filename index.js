@@ -42,6 +42,7 @@ function log(message) {
 function error(message) {
     console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}`);
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
 }
@@ -117,15 +118,15 @@ function askQuestion(query) {
     }));
 }
 async function askYesOrNo(query) {
-    let response = await askQuestion(query);
+    const response = await askQuestion(query);
     return response == "y" || response == "yes";
 }
 /**Copies a directory recursively. */
 function copyDirectory(source, destination) {
     fs.mkdirSync(destination, { recursive: true });
     fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
-        let sourcePath = path.join(source, entry.name);
-        let destinationPath = path.join(destination, entry.name);
+        const sourcePath = path.join(source, entry.name);
+        const destinationPath = path.join(destination, entry.name);
         entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
     });
 }
@@ -139,11 +140,11 @@ function parseJSONC(data) {
 }
 /**Parses arguments into a useable format. */
 function parseArgs(args) {
-    let parsedArgs = {};
+    const parsedArgs = {};
     let argName = "null";
-    let mindustryArgs = [];
+    const mindustryArgs = [];
     let mode = 0;
-    for (let arg of args) {
+    for (const arg of args) {
         if (arg == "--") {
             //The remaining args need to be sent to the JVM.
             mode = 1;
@@ -250,7 +251,7 @@ function restart(state, build, compile) {
     log("Started new process.");
 }
 function copyMods(state) {
-    for (let mod of state.externalMods) {
+    for (const mod of state.externalMods) {
         if (mod.type == "java") {
             //Maybe build the directory
             if (state.buildMods) {
@@ -281,7 +282,7 @@ function copyMods(state) {
                 }
             }
             else {
-                let modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+                const modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
                 fs.copyFileSync(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
             }
         }
@@ -330,14 +331,14 @@ function getPathOfVersion(version) {
         }
         else if (version.match(/(?<=^foo-)\d+$/i)) {
             //Foo version
-            let versionNumber = version.match(/(?<=^foo-)\d+$/i)[0];
+            const versionNumber = version.match(/(?<=^foo-)\d+$/i)[0];
             resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
                 .then(response => resolve(response))
                 .catch(error => reject(error));
         }
         else if (version.match(/(?<=be-)\d+$/i)) {
             //Bleeding edge version
-            let versionNumber = version.match(/(?<=be-)\d+$/i)[0];
+            const versionNumber = version.match(/(?<=be-)\d+$/i)[0];
             resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
                 .then(response => resolve(response))
                 .catch(error => reject(error));
@@ -348,7 +349,7 @@ function getPathOfVersion(version) {
                     reject(`Error: Expected status 302, got ${res.statusCode}`);
                 }
                 if (res.headers.location) {
-                    let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+                    const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
                     if (!versionNumber) {
                         reject(`Error: Server responded with invalid redirect location.`);
                     }
@@ -367,7 +368,7 @@ function getPathOfVersion(version) {
                     reject(`Error: Expected status 302, got ${res.statusCode}`);
                 }
                 if (res.headers.location) {
-                    let versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
+                    const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
                     if (!versionNumber) {
                         reject(`Error: Server responded with invalid redirect location.`);
                     }
@@ -386,7 +387,7 @@ async function handleDownload(state) {
     if (await askYesOrNo("Would you like to download the file? [y/n]:")) {
         try {
             log("Resolving version...");
-            let downloadPath = await getPathOfVersion(state.parsedArgs["version"]);
+            const downloadPath = await getPathOfVersion(state.parsedArgs["version"]);
             log("Downloading...");
             log("There's no status bar so you just have to trust me.");
             await downloadFile(downloadPath, path.join(`${state.settings.mindustryJars.folderPath}`, `v${state.parsedArgs["version"]}.jar`));
@@ -394,7 +395,12 @@ async function handleDownload(state) {
         }
         catch (err) {
             error("An error occured while downloading the file: ");
-            error(err);
+            if (err instanceof Error) {
+                error(err.message);
+            }
+            else {
+                console.error(err);
+            }
             return false;
         }
         return true;
@@ -453,6 +459,7 @@ function launch(state, recursive) {
                 state.mindustryProcess?.removeAllListeners();
                 state.mindustryProcess?.kill("SIGTERM");
                 process.exit(0);
+                break;
             default:
                 log("Unknown command.");
                 break;
@@ -485,15 +492,15 @@ function init(processArgs) {
     //Change working directory to the same as this program's index.js file
     process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep)); //Use of process.argv is necessary to grab the "hidden" argument to `node`
     //Parse arguments
-    let [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
+    const [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
     //Get a bunch of static things
-    let mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
+    const mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
         process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") :
             process.platform == "linux" ? path.normalize("") :
                 fatal(`Unsupported platform ${process.platform}`);
-    let modsDirectory = path.join(mindustryDirectory, "mods");
-    let launcherDataPath = path.join(mindustryDirectory, "launcher");
-    let username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
+    const modsDirectory = path.join(mindustryDirectory, "mods");
+    const launcherDataPath = path.join(mindustryDirectory, "launcher");
+    const username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
     //if settings file doesn't exist, 
     if (!fs.existsSync(path.join(launcherDataPath, "config.json"))) {
         log("No config.json file found, creating one. If this is your first launch, this is fine.");
@@ -509,8 +516,8 @@ function init(processArgs) {
             execSync(`notepad ${path.join(launcherDataPath, "config.json")}`);
         }
     }
-    let settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8"));
-    for (let [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
+    const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8"));
+    for (const [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
             fatal(`Jar name for version ${version} contains a space.`);
         }
@@ -523,7 +530,7 @@ function init(processArgs) {
         error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
         process.exit(1);
     }
-    let externalMods = settings.externalMods.map(modPath => ({
+    const externalMods = settings.externalMods.map(modPath => ({
         path: modPath,
         type: fs.existsSync(modPath) ?
             fs.lstatSync(modPath).isDirectory() ?
@@ -532,7 +539,7 @@ function init(processArgs) {
             : fatal(`External mod "${modPath}" does not exist.`)
     }));
     //Use the custom version name, but if it doesnt exist use "v${version}.jar";
-    let jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
+    const jarName = settings.mindustryJars.customVersionNames[parsedArgs["version"]] ?? `v${parsedArgs["version"] ?? 135}.jar`;
     //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
     let jarFilePath = jarName.match(/[/\\]/gi) ? jarName : settings.mindustryJars.folderPath + jarName;
     jarFilePath = jarFilePath.replace(/%[^ %]+?%/g, (text) => process.env[text.split("%")[1]] ?? text);
@@ -579,8 +586,8 @@ ${err.stderr.toString()}`);
             resolve(0);
         }
         catch (err) {
-            let errorMessage = err.stderr.toString();
-            let outputMessage = err.stdout.toString();
+            const errorMessage = err.stderr.toString();
+            const outputMessage = err.stdout.toString();
             if (outputMessage.includes("Merge conflict")) {
                 execSync("git merge --abort");
                 reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
@@ -595,7 +602,7 @@ ${err.stderr.toString()}`);
                             resolve(0);
                         }
                         catch (err) {
-                            let outputMessage = err.stdout.toString();
+                            const outputMessage = err.stdout.toString();
                             if (outputMessage.includes("Merge conflict")) {
                                 execSync("git merge --abort");
                                 reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
@@ -616,10 +623,9 @@ ${err.stderr.toString()}`);
         }
     });
 }
-;
 function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
-    let state = init(processArgs);
+    const state = init(processArgs);
     if ("help" in state.parsedArgs) {
         console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
 
@@ -658,7 +664,7 @@ function main(processArgs) {
                     return 1;
                 }
                 log("Compiling...");
-                let gradleProcess = spawn(`${state.jarFilePath}/gradlew.bat`, ["desktop:dist"], {
+                const gradleProcess = spawn(`${state.jarFilePath}/gradlew.bat`, ["desktop:dist"], {
                     cwd: state.jarFilePath
                 });
                 gradleProcess.stdout
