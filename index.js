@@ -30,18 +30,25 @@ const ANSIEscape = {
     "reset": `\u001b[0m`,
     "brightpurple": `\u001b[0;95m`
 };
+class LauncherError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "LauncherError";
+    }
+}
 function log(message) {
     console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
 function error(message) {
-    console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
+    console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}`);
 }
 function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
 }
 function fatal(message) {
-    throw new Error(message);
+    throw new LauncherError(message);
 }
+/**Returns the proper highlight color for a line based on the character inside [x] */
 function getLogHighlight(char) {
     switch (char) {
         case "I":
@@ -56,14 +63,14 @@ function getLogHighlight(char) {
             return ANSIEscape.white;
     }
 }
-function getTimeComponent(highlighted) {
-    if (highlighted)
+function getTimeComponent(color) {
+    if (color)
         return `${ANSIEscape.cyan}[${new Date().toTimeString().split(" ")[0]}]`;
     else
         return `[${new Date().toTimeString().split(" ")[0]}]`;
 }
 function formatLine(line) {
-    return `${getTimeComponent(true)} ${getLogHighlight(line.toString()[1])}${line}`;
+    return `${getTimeComponent(true)} ${getLogHighlight(line[1])}${line}`;
 }
 /**Creates a (? extends Stream.Transform) class from a function that processes one line at a time. */
 function streamTransform(transformFunction) {
@@ -113,6 +120,7 @@ async function askYesOrNo(query) {
     let response = await askQuestion(query);
     return response == "y" || response == "yes";
 }
+/**Copies a directory recursively. */
 function copyDirectory(source, destination) {
     fs.mkdirSync(destination, { recursive: true });
     fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
@@ -129,8 +137,8 @@ function parseJSONC(data) {
         //Removes "multiline" comments.
         .join("\n"));
 }
+/**Parses arguments into a useable format. */
 function parseArgs(args) {
-    //Parses arguments into a useable format.
     let parsedArgs = {};
     let argName = "null";
     let mindustryArgs = [];
@@ -155,7 +163,7 @@ function parseArgs(args) {
     }
     return [parsedArgs, mindustryArgs];
 }
-function downloadFile(url, output) {
+function downloadFile(url, outputPath) {
     return new Promise((resolve, reject) => {
         https.get(url, (res) => {
             if (res.statusCode == 404) {
@@ -164,7 +172,7 @@ function downloadFile(url, output) {
             else if (res.statusCode != 200) {
                 reject(`Expected status code 200, got ${res.statusCode}`);
             }
-            const file = fs.createWriteStream(output);
+            const file = fs.createWriteStream(outputPath);
             res.pipe(file);
             file.on('finish', () => {
                 file.close();
@@ -174,17 +182,15 @@ function downloadFile(url, output) {
     });
 }
 function startProcess(state) {
-    const proc = spawn("java", [...state.jvmArgs, `-jar`, state.jarFilePath, ...state.mindustryArgs], {
-        shell: false
-    });
+    const proc = spawn("java", [...state.jvmArgs, `-jar`, state.jarFilePath, ...state.mindustryArgs], { shell: false });
     const d = new Date();
     if (state.settings.logging.enabled) {
-        state.currentLogStream = fs.createWriteStream(`${state.settings.logging.path}${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`);
+        state.currentLogStream = fs.createWriteStream(path.join(`${state.settings.logging.path}`, `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`));
         //Creates a write stream and pipes the output of the mindustry process into it.
-        if (state.settings.logging.removeUsername)
+        if (state.settings.logging.removeUsername && state.username != null)
             proc.stdout
                 .pipe(new (prependTextTransform(() => getTimeComponent(false))))
-                .pipe(new CensorKeywordTransform(process.env["USERNAME"], "[USERNAME]"))
+                .pipe(new CensorKeywordTransform(state.username, "[USERNAME]"))
                 .pipe(state.currentLogStream);
         else
             proc.stdout
@@ -220,6 +226,7 @@ function startProcess(state) {
     });
     return proc;
 }
+/**Restarts the mindustry process. */
 function restart(state, build, compile) {
     if (build && compile) {
         error("How were you able to trigger a rebuild and a recompile at the same time? Restarting...");
@@ -238,47 +245,50 @@ function restart(state, build, compile) {
     if (build)
         copyMods(state);
     if (compile)
-        error("Compiling mods on restart is not yet implemented because this bit of code doesn't know what to compile");
+        error("Compiling client on restart is not yet implemented because this bit of code doesn't know what to compile");
     state.mindustryProcess = startProcess(state);
     log("Started new process.");
 }
 function copyMods(state) {
-    for (let file of state.settings.externalMods) {
-        if (!fs.existsSync(file)) {
-            error(`Mod "${file}" does not exist.`);
+    for (let modPath of state.settings.externalMods) {
+        if (!fs.existsSync(modPath)) {
+            error(`Mod "${modPath}" does not exist.`);
             continue;
         }
-        if (fs.lstatSync(file).isDirectory()) {
-            if (fs.existsSync(path.join(file, "build.gradle"))) {
-                log(`Copying and building java mod directory "${file}"`);
+        if (fs.lstatSync(modPath).isDirectory()) {
+            if (fs.existsSync(path.join(modPath, "build.gradle"))) {
+                //If build.gradle exists, this must be a java mod
+                log(`Copying and building java mod directory "${modPath}"`);
                 const preBuildTime = Date.now();
                 try {
                     execSync("gradlew jar", {
-                        cwd: file
+                        cwd: modPath
                     });
                 }
                 catch (err) {
                     fatal(`Build failed!`);
                 }
                 const timeTaken = Date.now() - preBuildTime;
-                log(`Built ${file} in ${timeTaken.toFixed(0)}ms`);
-                let modFile = fs.readdirSync(path.join(file, "build", "libs"))[0];
+                log(`Built ${modPath} in ${timeTaken.toFixed(0)}ms`);
+                let modFile = fs.readdirSync(path.join(modPath, "build", "libs"))[0];
                 let modName = modFile.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                fs.copyFileSync(path.join(file, "build", "libs", modFile), path.join(state.modsDirectory, modName + ".jar"));
+                fs.copyFileSync(path.join(modPath, "build", "libs", modFile), path.join(state.modsDirectory, modName + ".jar"));
             }
             else {
-                log(`Copying mod directory "${file}"`);
-                copyDirectory(file, path.join(state.modsDirectory, file.split(/[\/\\]/).at(-1))); //TODO error handle
+                //Otherwise, we can just copy the whole directory
+                log(`Copying mod directory "${modPath}"`);
+                copyDirectory(modPath, path.join(state.modsDirectory, modPath.split(/[\/\\]/).at(-1))); //TODO error handle
             }
         }
         else {
-            let modname = file.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=((Desktop)?\.(jar))|(zip)$)/i); //hello regex my old friend
+            //The mod is a file, so just copy it
+            let modname = modPath.match(/(?<=[/\\])[^/\\:*?"<>]+?(?=((Desktop)?\.(jar))|(zip)$)/i); //hello regex my old friend
             if (modname == null) {
-                error(`Invalid mod filename ${file}!`);
+                error(`Invalid mod filename ${modPath}!`);
             }
             else {
-                log(`Copying modfile "${file}"`);
-                fs.copyFileSync(file, path.join(state.modsDirectory, `${modname[0]}.jar`)); //TODO refactor this section, it won't work on .zip files
+                log(`Copying modfile "${modPath}"`);
+                fs.copyFileSync(modPath, path.join(state.modsDirectory, `${modname[0]}.jar`)); //TODO refactor this section, it won't work on .zip files
             }
         }
     }
@@ -366,7 +376,7 @@ function getPathOfVersion(version) {
     });
 }
 async function handleDownload(state) {
-    if (await askYesOrNo("Would you like to download the file? [y/n]")) {
+    if (await askYesOrNo("Would you like to download the file? [y/n]:")) {
         try {
             log("Resolving version...");
             let downloadPath = await getPathOfVersion(state.parsedArgs["version"]);
@@ -428,7 +438,7 @@ function launch(state, recursive) {
                 break;
             case "?":
             case "help":
-                log(`Commands: 'restart', 'help', 'exit'`);
+                log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help', 'exit'`);
                 break;
             case "exit":
             case "e":
@@ -452,12 +462,13 @@ function launch(state, recursive) {
         }
     }
 }
+/**Returns a State given process args. */
 function init(processArgs) {
     //Change working directory to the same as this program's index.js file
-    process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep));
+    process.chdir(process.argv[1].split(path.sep).slice(0, -1).join(path.sep)); //Use of process.argv is necessary to grab the "hidden" argument to `node`
     //Parse arguments
     let [parsedArgs, jvmArgs] = parseArgs(processArgs.slice(2));
-    //check settings
+    //Get a bunch of static things
     let mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
         process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") :
             process.platform == "linux" ? path.normalize("") :
@@ -465,12 +476,13 @@ function init(processArgs) {
     let modsDirectory = path.join(mindustryDirectory, "mods");
     let launcherDataPath = path.join(mindustryDirectory, "launcher");
     let username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
+    //if settings file doesn't exist, 
     if (!fs.existsSync(path.join(launcherDataPath, "config.json"))) {
         log("No config.json file found, creating one. If this is your first launch, this is fine.");
         if (!fs.existsSync(launcherDataPath)) {
             fs.mkdirSync(launcherDataPath);
         }
-        fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"));
+        fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"), fs.constants.COPYFILE_EXCL);
         log("Opening the file. You will need to edit it.");
         try {
             execSync(`code ${path.join(launcherDataPath, "config.json")}`);
@@ -486,8 +498,10 @@ function init(processArgs) {
             process.exit(1);
         }
     }
-    if (username == null)
+    if (username == null && settings.logging.removeUsername) {
+        error("Could not determine your username, disabling logging.removeUsername");
         settings.logging.removeUsername = false;
+    }
     if (!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory)) {
         error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
         process.exit(1);
@@ -578,7 +592,6 @@ ${err.stderr.toString()}`);
 ;
 function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
-    let filePath, mindustryDirectory;
     let state = init(processArgs);
     if ("help" in state.parsedArgs) {
         console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
@@ -630,7 +643,7 @@ function main(processArgs) {
                 gradleProcess.on("exit", (code) => {
                     if (code == 0) {
                         log("Compiled succesfully.");
-                        filePath += `desktop${path.sep}build${path.sep}libs${path.sep}Mindustry.jar`;
+                        state.jarFilePath = path.join(state.jarFilePath, "desktop/build/libs/Mindustry.jar");
                         if ("buildMods" in state.parsedArgs)
                             copyMods(state);
                         launch(state, false);
@@ -670,7 +683,8 @@ try {
     main(process.argv);
 }
 catch (err) {
-    if (typeof err == "string") {
+    if (err instanceof LauncherError) {
+        error(err.message);
         error("Exiting due to fatal error.");
     }
     else {
