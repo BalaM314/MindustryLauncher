@@ -711,11 +711,13 @@ function main(processArgs:typeof process.argv):number {
 
 	if("help" in state.parsedArgs){
 		console.log(
-	`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
+	`Usage: mindustry [--help] [--version <version>] [--compile] [--buildMods] [--update] [-- jvmArgs]
 
 	--help\tDisplays this help message and exits.
 	--version\tSpecifies the version to use.
 	--compile\tCompiles before launching, only works if the version points to a source directory.
+	--update\tUpdates the launcher. Requires git.
+	--buildMods\tBuilds java mod directories before copying them.
 	--\t\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`
 		);
 		return 0;

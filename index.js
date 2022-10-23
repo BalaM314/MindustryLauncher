@@ -627,11 +627,13 @@ function main(processArgs) {
     //Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
     const state = init(processArgs);
     if ("help" in state.parsedArgs) {
-        console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [-- jvmArgs]
+        console.log(`Usage: mindustry [--help] [--version <version>] [--compile] [--buildMods] [--update] [-- jvmArgs]
 
 	--help\tDisplays this help message and exits.
 	--version\tSpecifies the version to use.
 	--compile\tCompiles before launching, only works if the version points to a source directory.
+	--update\tUpdates the launcher. Requires git.
+	--buildMods\tBuilds java mod directories before copying them.
 	--\t\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`);
         return 0;
     }
