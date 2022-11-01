@@ -18,6 +18,7 @@ import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
 import * as readline from "readline";
+import * as os from "os";
 import { Stream, TransformCallback, TransformOptions } from "stream";
 
 
@@ -575,8 +576,8 @@ function init(processArgs:string[]):State {
 	//Get a bunch of static things
 	const mindustryDirectory =
 	process.platform == "win32" ? path.join(process.env["APPDATA"]!, "Mindustry/") :
-		process.platform == "darwin" ? path.normalize("~/Library/Application Support/Mindustry/") : 
-			process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? "~/.local/share") + "/Mindustry/") :
+		process.platform == "darwin" ? path.join(os.homedir(), "/Library/Application Support/Mindustry/") : 
+			process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), "/.local/share")) + "/Mindustry/") :
 				fatal(`Unsupported platform ${process.platform}`);
 	const modsDirectory = path.join(mindustryDirectory, "mods");
 	const launcherDataPath = path.join(mindustryDirectory, "launcher");
