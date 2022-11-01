@@ -516,12 +516,18 @@ function init(processArgs) {
             });
         }
         fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"), fs.constants.COPYFILE_EXCL);
-        log("Currently using default settings: run `mindustry --config` to edit the settings file.");
+        if (!("config" in parsedArgs))
+            log("Currently using default settings: run `mindustry --config` to edit the settings file.");
     }
     const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8"));
     for (const [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
         if (jarName.includes(" ")) {
-            fatal(`Jar name for version ${version} contains a space.`);
+            error(`Jar name for version ${version} contains a space.`);
+            if (!("config" in parsedArgs)) {
+                error(`Run "mindustry --config" to change settings.`);
+                process.exit(1);
+            }
+            break;
         }
     }
     if (username == null && settings.logging.removeUsername) {
