@@ -575,8 +575,8 @@ function init(processArgs:string[]):State {
 	//Get a bunch of static things
 	const mindustryDirectory =
 	process.platform == "win32" ? path.join(process.env["APPDATA"]!, "Mindustry/") :
-		process.platform == "darwin" ? path.normalize("~/.local/share/Mindustry/") : 
-			process.platform == "linux" ? path.normalize("") :
+		process.platform == "darwin" ? path.normalize("~/Library/Application Support/Mindustry/") : 
+			process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? "~/.local/share") + "/Mindustry/") :
 				fatal(`Unsupported platform ${process.platform}`);
 	const modsDirectory = path.join(mindustryDirectory, "mods");
 	const launcherDataPath = path.join(mindustryDirectory, "launcher");
@@ -586,7 +586,9 @@ function init(processArgs:string[]):State {
 	if(!fs.existsSync(path.join(launcherDataPath, "config.json"))){
 		log("No config.json file found, creating one. If this is your first launch, this is fine.");
 		if(!fs.existsSync(launcherDataPath)){
-			fs.mkdirSync(launcherDataPath);
+			fs.mkdirSync(launcherDataPath, {
+				recursive: true
+			});
 		}
 		fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"), fs.constants.COPYFILE_EXCL);
 		log("Currently using default settings: run `mindustry --config` to edit the settings file.");
