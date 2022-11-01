@@ -613,7 +613,7 @@ function init(processArgs:string[]):State {
 		settings.logging.removeUsername = false;
 	}
 
-	if(!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory)){
+	if(!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory())){
 		error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
 		if(!("config" in parsedArgs)){
 			error(`Run "mindustry --config" to change settings.`);
