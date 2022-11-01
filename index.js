@@ -327,6 +327,24 @@ function resolveRedirect(url) {
         });
     });
 }
+const versionUrls = {
+    vanilla: {
+        url: version => `https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`,
+        regex: /^(\d+\.?\d)?$/
+    },
+    foo: {
+        url: version => `https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${version}/desktop.jar`,
+        regex: /(?<=^foo-)(\d+)$/i
+    },
+    "foo-v6": {
+        url: version => `https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/download/${version}/desktop.jar`,
+        regex: /(?<=^foo-)(\d+)$/i
+    },
+    be: {
+        url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
+        regex: /(?<=be-)(\d+)$/i
+    },
+};
 function getPathOfVersion(version) {
     return new Promise((resolve, reject) => {
         if (version.match(/^\d+\.?\d?$/)) {
