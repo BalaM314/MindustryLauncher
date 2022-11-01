@@ -686,7 +686,7 @@ function main(processArgs:typeof process.argv):number {
 		return 0;
 	}
 
-	if("version" in state.parsedArgs){
+	if(state.parsedArgs["version"]){
 		if(state.jarFilePath.match(/[/\\]$/i)){
 			if("compile" in state.parsedArgs){
 				try {
