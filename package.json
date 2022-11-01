@@ -1,6 +1,6 @@
 {
   "name": "mindustrylauncher",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A custom Mindustry launcher, with useful features like auto-restart and better logging.",
   "main": "index.js",
   "scripts": {

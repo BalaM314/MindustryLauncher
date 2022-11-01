@@ -610,7 +610,10 @@ function init(processArgs:string[]):State {
 
 	if(!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory)){
 		error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
-		process.exit(1);
+		if(!("config" in parsedArgs)){
+			error(`Run "mindustry --config" to change settings.`);
+			process.exit(1);
+		}
 	}
 
 	const externalMods = settings.externalMods.map(modPath => ({
