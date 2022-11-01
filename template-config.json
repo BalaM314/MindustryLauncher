@@ -2,8 +2,7 @@
 	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
 	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
-		//REQUIRED: Set this to a folder containing the .jar files for each version.
-		//Example: "folderPath": "C:\\Mindustry\\versions\\"
+		//A folder containing the .jar files for each version.
 		"folderPath": "C:\\Mindustry\\Versions\\",
 		"customVersionNames": {
 			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
@@ -16,13 +15,13 @@
 		}
 	},
 	"jvmArgs": [
+		//Memory allocation, minimum 1G and maximum 2G.
+		"-Xmx2G",
+		"-Xms1G",
 		//JVM arguments, don't touch if you don't understand.
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
 		"-Dpolicone",
-		"-XX:+ShowCodeDetailsInExceptionMessages",
-		//Memory allocation, minimum 1G and maximum 2G.
-		"-Xmx2G",
-		"-Xms1G"
+		"-XX:+ShowCodeDetailsInExceptionMessages"
 	],
 	"processArgs": [
 		//List of args to pass to the actual process. Not sure why you would want this.

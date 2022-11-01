@@ -17,18 +17,14 @@ A custom launcher for Mindustry built with TypeScript and Node.
 
 ## Installation
 
-Warning: the installation is WIP and rather annoying if you are not tech-savvy.
+Requirements: Node.JS and NPM
 
-Requirements: Node.JS, Git(for automatic update)
-
-1. Download this folder somewhere, I recommend "C:\Mindustry\Launcher".
-2. Copy the provided batch file(mindustry.bat) into a directory on your PATH. This is done so you can type `mindustry` instead of `node C:\Mindustry\Launcher\index.js`. (In other words, it's a path script.)
-3. If you didn't download to C:\Mindustry\Launcher, open and edit the batch file in the way it says.
-4. Edit the config.json file in this directory if you want to change the settings. You need to if you didn't download to C:\Mindustry\Launcher.
+1. Run `npm i -g github:BalaM314/MindustryLauncher`
+2. Run `mindustry --config`.
 
 better installation coming soon
 
 ## Usage
 CLI only.
 
-`mindustry [--help] [--update] [--compile] --version <version> [-- jvmArgs...]`
+`mindustry [--help] [--compile] [--buildMods] --version <version> [-- jvmArgs...]`

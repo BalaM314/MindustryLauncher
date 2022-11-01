@@ -13,7 +13,7 @@
  * 
  */
 
-import { ChildProcess, execSync, spawn, SpawnSyncReturns } from "child_process";
+import { ChildProcess, execSync, spawn, spawnSync, SpawnSyncReturns } from "child_process";
 import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
@@ -93,7 +93,7 @@ function log(message:string){
 	console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
 }
 function error(message:string){
-	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}`);
+	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}${ANSIEscape.reset}`);
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function debug(message:string){
@@ -204,6 +204,10 @@ function parseJSONC(data:string) {
 		//Removes "multiline" comments.
 		.join("\n")
 	);
+}
+
+function throwIfError(output:SpawnSyncReturns<Buffer>){
+	if(output.error) throw output.error;
 }
 
 /**Parses arguments into a useable format. */
@@ -585,12 +589,7 @@ function init(processArgs:string[]):State {
 			fs.mkdirSync(launcherDataPath);
 		}
 		fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"), fs.constants.COPYFILE_EXCL);
-		log("Opening the file. You will need to edit it.");
-		try {
-			execSync(`code ${path.join(launcherDataPath, "config.json")}`);
-		} catch(err){
-			execSync(`notepad ${path.join(launcherDataPath, "config.json")}`);
-		}
+		log("Currently using default settings: run `mindustry --config` to edit the settings file.");
 	}
 	
 	const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8")) as Settings;
@@ -644,67 +643,6 @@ function init(processArgs:string[]):State {
 	};
 }
 
-function updateLauncher():Promise<number>{ return new Promise((resolve, reject) => {
-	function fatalError(err:SpawnSyncReturns<Buffer>){
-		reject(
-`A command failed to complete. stdout:
-${err.stdout.toString()}
-stderr:
-${err.stderr.toString()}`
-		);
-	}
-	function commitChanges(){
-		execSync("git add .");
-		execSync(`git commit -m "[MindustryLauncher] Automated commit: update"`);
-	}
-	function pull(){
-		execSync("git pull");
-	}
-
-
-	log("Updating...");
-	try {
-		execSync(`${process.platform == "win32" ? "where" : "which"} git`);
-	} catch(err){
-		reject("Unable to update automatically as you do not have Git installed.");
-	}
-	try {
-		pull();
-		resolve(0);
-	} catch(err){
-		const errorMessage = (err as SpawnSyncReturns<Buffer>).stderr.toString();
-		const outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
-		if(outputMessage.includes("Merge conflict")){
-			execSync("git merge --abort");
-			reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
-		} else if(errorMessage.includes("commit your changes")){
-			askYesOrNo(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} Failed to update because you have local changes. Would you like to commit them?\nIf you don't know what this means, type yes. [y/n]:`)
-				.then(response => {
-					if(response){
-						try {
-							commitChanges();
-							pull();
-							resolve(0);
-						} catch(err){
-							const outputMessage = (err as SpawnSyncReturns<Buffer>).stdout.toString();
-							if(outputMessage.includes("Merge conflict")){
-								execSync("git merge --abort");
-								reject("✨mergeconflict✨\nYou have merge conflicts!!11!1!1\nThe merge has been aborted. Please attempt to pull and resolve conflicts manually.");
-							} else {
-								fatalError(err as SpawnSyncReturns<Buffer>);
-							}
-						}
-					} else {
-						resolve(1);
-					}
-				});
-		} else {
-			fatalError(err as SpawnSyncReturns<Buffer>);
-		}
-	}
-
-});}
-
 function main(processArgs:typeof process.argv):number {
 	//Change working directory to directory the file is in, otherwise it would be wherever you ran the command from
 
@@ -717,24 +655,35 @@ function main(processArgs:typeof process.argv):number {
 	--help\tDisplays this help message and exits.
 	--version\tSpecifies the version to use.
 	--compile\tCompiles before launching, only works if the version points to a source directory.
-	--update\tUpdates the launcher. Requires git.
+	--config\tOpens the launcher's settings file.
 	--buildMods\tBuilds java mod directories before copying them.
 	--\t\tTells the launcher to stop parsing args and send remaining arguments to the JVM.`
 		);
 		return 0;
 	}
 
-	if("update" in state.parsedArgs){
-		updateLauncher()
-			.then(message => {switch(message){
-				case 0: log("Successfully updated."); break;
-				case 1: log("Update aborted."); break;
-			}})
-			.catch((err:string) => {
-				error("Update failed due to an error!");
-				error(err);
-			});
-		return -1;
+	if("config" in state.parsedArgs){
+		const settingsPath = path.join(state.launcherDataPath, "config.json");
+		try {
+			log(`Opening ${settingsPath}`);
+			throwIfError(spawnSync("code.cmd", [settingsPath]));
+			log(`Editor closed.`);
+		} catch(err){
+			error(err as string);
+			try {
+				throwIfError(spawnSync("notepad", [settingsPath]));
+				log(`Editor closed.`);
+			} catch(err){
+				askQuestion("Please specify the editor to use:")
+					.then((editor) => {
+						throwIfError(spawnSync(editor, [settingsPath]));
+						log(`Editor closed.`);
+					})
+					.catch((err) => error("Could not open the file: " + err));
+				return -1;
+			}
+		}
+		return 0;
 	}
 
 	if("version" in state.parsedArgs){
