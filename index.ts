@@ -407,27 +407,79 @@ const versionUrls: {
 	[type:string]: {
 		/**Returns url to .jar file given version number. */
 		url: (version:string) => string;
-		/**Regex matching the provided version. First match group should return the version number. */
+		/**Contains data used to get the latest version: $[0] is a redirect to resolve, and $[1] is a regex that returns the version number from the resolved redirect in the first capture group. */
+		getLatestVersion: [string, RegExp];
+		/**Regex matching the provided version. First capture group should return the version number, or "latest". */
 		regex: RegExp;
 	};
 } = {
 	vanilla: {
 		url: version => `https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`,
-		regex: /^(\d+\.?\d)?$/
+		getLatestVersion: [`https://github.com/Anuken/Mindustry/releases/latest`, /(?<=\/tag\/v)(\d+(?:\.\d)?)/],
+		regex: /^(\d+(?:\.\d)?|latest)$/
 	},
 	foo: {
 		url: version => `https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${version}/desktop.jar`,
-		regex: /(?<=^foo-)(\d+)$/i
+		getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, /(?<=\/tag\/)\d+/],
+		regex: /(?<=^foo-)(\d+|latest)$/i
 	},
 	"foo-v6": {
 		url: version => `https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/download/${version}/desktop.jar`,
-		regex: /(?<=^foo-)(\d+)$/i
+		getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/latest`, /(?<=\/tag\/)\d+/],
+		regex: /(?<=^foo-v6-)(\d+|latest)$/i
 	},
 	be: {
 		url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
-		regex: /(?<=be-)(\d+)$/i
+		getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)\d+/],
+		regex: /(?<=be-)(\d+|latest)$/i
 	},
 };
+
+/**Returns the name of a version from input. */
+function getVersion(input:string):string | null {
+	Object.entries(versionUrls).forEach(([name, versionData]) => {
+		if(versionData.regex.test(input)) return name;
+	});
+	return null;
+}
+
+async function getLatestVersion(name:string):Promise<string> {
+	const versionData = versionUrls[name];
+	const resolvedUrl = await resolveRedirect(versionData.getLatestVersion[0]);
+	const result = versionData.getLatestVersion[1].exec(resolvedUrl);
+	if(result == null || result[1] == undefined)
+		throw new Error(`regex /${versionData.regex.source}/ did not match resolved url ${resolvedUrl} for version ${name}`);
+	return result[1];
+}
+
+function someUsefulCode(version:string){
+	return new Promise((resolve, reject) => {
+		
+		Object.entries(versionUrls).forEach(([name, versionData]) => {
+			if(versionData.regex.test(version)){
+				const result = version.match(versionData.regex);
+				if(result == null || result[1] == undefined)
+					throw new Error(`versionUrls ast for version ${name} is invalid; regex /${versionData.regex.source}/ matched ${version} but didn't have a capture group`);
+				log(`Looking up download url for ${name} version ${result[1]}`);
+				if(result[1] == "latest"){
+					resolveRedirect(versionData.getLatestVersion[0])
+						.then(resolvedUrl => {
+							const result = versionData.getLatestVersion[1].exec(resolvedUrl);
+							if(result == null || result[1] == undefined)
+								throw new Error(`versionUrls ast for version ${name} is invalid; regex /${versionData.regex.source}/ matched ${version} but didn't have a capture group`);
+							log(`Looking up download url for ${name} version ${result[1]}`);
+							resolveRedirect(versionData.url(result[1]))
+								.then(resolve).catch(reject);
+						});
+				} else {
+					resolveRedirect(versionData.url(result[1]))
+						.then(resolve).catch(reject);
+				}
+			}
+		});
+
+	});
+}
 
 function getPathOfVersion(version:string):Promise<string> {
 	return new Promise((resolve, reject) => {
