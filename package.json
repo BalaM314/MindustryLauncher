@@ -29,5 +29,8 @@
     "@typescript-eslint/parser": "^5.40.1",
     "eslint": "^8.26.0",
     "typescript-eslint": "^0.0.1-alpha.0"
+  },
+  "dependencies": {
+    "cli-app": "github:BalaM314/cli-app"
   }
 }
