@@ -189,9 +189,9 @@ export const versionUrls: {
 
 /**Returns the name of a version from input. */
 export function getVersion(input:string):string | null {
-	Object.entries(versionUrls).forEach(([name, versionData]) => {
+	for(const [name, versionData] of Object.entries(versionUrls)){
 		if(versionData.regex.test(input)) return name;
-	});
+	}
 	return null;
 }
 
