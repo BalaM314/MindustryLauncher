@@ -12,7 +12,6 @@ Contains functions that are part of the program code.
 
 import * as path from "path";
 import * as fs from "fs";
-import * as https from "https";
 import * as os from "os";
 import { spawn, execSync } from "child_process";
 import { Application, Options } from "cli-app";
@@ -249,63 +248,6 @@ export function lookupDownloadUrl(version:string, versionName:string){
 			}
 		} else {
 			reject(`Invalid version ${version}`);
-		}
-	});
-}
-
-export function ___getPathOfVersion(version:string):Promise<string> {
-	return new Promise((resolve, reject) => {
-		if(version.match(/^\d+\.?\d?$/)){
-			//Regular mindustry version
-			resolveRedirect(`https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`)
-				.then(response => resolve(response))
-				.catch(error => reject(error));
-		} else if(version.match(/(?<=^foo-)\d+$/i)){
-			//Foo version
-			const versionNumber = version.match(/(?<=^foo-)\d+$/i)![0]!;
-			resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
-				.then(response => resolve(response))
-				.catch(error => reject(error));
-		} else if(version.match(/(?<=be-)\d+$/i)){
-			//Bleeding edge version
-			const versionNumber = version.match(/(?<=be-)\d+$/i)![0]!;
-			resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
-				.then(response => resolve(response))
-				.catch(error => reject(error));
-		} else if(version == "foo"){
-			https.get(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, (res) => {
-				if(res.statusCode != 302){
-					reject(`Error: Expected status 302, got ${res.statusCode}`);
-				}
-				if(res.headers.location){
-					const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
-					if(!versionNumber){
-						reject(`Error: Server responded with invalid redirect location.`);
-					}
-					resolveRedirect(`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${versionNumber}/desktop.jar`)
-						.then(response => resolve(response))
-						.catch(error => reject(error));
-				} else {
-					reject(`Error: Server did not respond with redirect location.`);
-				}
-			});
-		} else if(version == "be"){
-			https.get(`https://github.com/Anuken/MindustryBuilds/releases/latest`, (res) => {
-				if(res.statusCode != 302){
-					reject(`Error: Expected status 302, got ${res.statusCode}`);
-				}
-				if(res.headers.location){
-					const versionNumber = res.headers.location.match(/(?<=\/tag\/)\d+/)?.[0];
-					if(!versionNumber){
-						reject(`Error: Server responded with invalid redirect location.`);
-					}
-					resolveRedirect(`https://github.com/Anuken/MindustryBuilds/releases/download/${versionNumber}/Mindustry-BE-Desktop-${versionNumber}.jar`)
-						.then(response => resolve(response))
-						.catch(error => reject(error));
-				} else {
-					reject(`Error: Server did not respond with redirect location.`);
-				}
-			});
 		}
 	});
 }
