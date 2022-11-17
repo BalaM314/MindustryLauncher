@@ -1,0 +1,1 @@
+* Add a progress bar for the download
