@@ -93,6 +93,9 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
 			return 1;
 		}
 		//Jar file exists, all good
+	} else {
+		//It's just a regular file, we already checked that it exists
+		state.jarFile.path = filepath;
 	}
 
 	copyMods(state);
