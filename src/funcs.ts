@@ -139,13 +139,13 @@ export async function askYesOrNo(query:string):Promise<boolean> {
 
 /**Copies a directory recursively. */
 export function copyDirectory(source:string, destination:string, exclude:string = ""){
-	if(source == exclude) return;
+	if(path.basename(source) == exclude) return;
 	fs.mkdirSync(destination, {recursive: true});
 	fs.readdirSync(source, {withFileTypes: true}).forEach(entry => {
 		const sourcePath = path.join(source, entry.name);
 		const destinationPath = path.join(destination, entry.name);
 
-		entry.isDirectory() ? copyDirectory(sourcePath, destinationPath) : fs.copyFileSync(sourcePath, destinationPath);
+		entry.isDirectory() ? copyDirectory(sourcePath, destinationPath, exclude) : fs.copyFileSync(sourcePath, destinationPath);
 	});
 }
 
