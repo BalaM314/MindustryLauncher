@@ -75,7 +75,6 @@ async function restart(state, build, compile) {
     state.mindustryProcess?.removeAllListeners();
     state.mindustryProcess?.kill("SIGTERM"); //todo see if this causes issues
     state.buildMods = build;
-    copyMods(state);
     if (compile) {
         if (state.jarFile.sourceDirectory) {
             await compileDirectory(state.jarFile.sourceDirectory);
@@ -84,6 +83,7 @@ async function restart(state, build, compile) {
             error("Cannot compile, launched version did not come from a source directory.");
         }
     }
+    copyMods(state);
     state.mindustryProcess = startProcess(state);
     log("Started new process.");
 }
@@ -205,14 +205,14 @@ export function lookupDownloadUrl(version, versionName) {
                     log(`Looking up download url for ${versionName} version ${result[1]}`);
                     resolveRedirect(versionData.url(result[1]))
                         .then((url) => resolve({
-                        url, jarName: versionName + "-" + result[1]
+                        url, jarName: `v${versionName == "vanilla" ? "" : (versionName + "-")}${result[1]}.jar`
                     })).catch(reject);
                 });
             }
             else {
                 resolveRedirect(versionData.url(result[1]))
                     .then((url) => resolve({
-                    url, jarName: versionName + "-" + result[1]
+                    url, jarName: `v${versionName == "vanilla" ? "" : (versionName + "-")}${result[1]}.jar`
                 })).catch(reject);
             }
         }
