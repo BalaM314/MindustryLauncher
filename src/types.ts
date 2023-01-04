@@ -26,6 +26,7 @@ export interface Settings {
 	externalMods: string[];
 	restartAutomaticallyOnModUpdate: boolean;
 	watchWholeJavaModDirectory: boolean;
+	buildModsConcurrently: boolean;
 	logging: {
 		path: string;
 		enabled: boolean;

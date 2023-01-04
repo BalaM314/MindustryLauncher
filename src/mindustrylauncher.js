@@ -9,6 +9,7 @@ Contains functions that are part of the program code.
 */
 import * as path from "path";
 import * as fs from "fs";
+import { promises as fsP } from "fs";
 import * as os from "os";
 import { spawn, execSync } from "child_process";
 import { prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform, log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect, stringifyError } from "./funcs.js";
@@ -30,22 +31,15 @@ function startProcess(state) {
                 .pipe(state.currentLogStream);
     }
     if (state.settings.logging.removeUsername && state.username != null) {
-        proc.stdout
+        [proc.stdout, proc.stderr].forEach(stream => stream
             .pipe(new LoggerHighlightTransform())
             .pipe(new CensorKeywordTransform(state.username, "[USERNAME]"))
-            .pipe(process.stdout);
-        proc.stderr
-            .pipe(new LoggerHighlightTransform())
-            .pipe(new CensorKeywordTransform(state.username, "[USERNAME]"))
-            .pipe(process.stderr);
+            .pipe(process.stdout));
     }
     else {
-        proc.stdout
+        [proc.stdout, proc.stderr].forEach(stream => stream
             .pipe(new LoggerHighlightTransform())
-            .pipe(process.stdout);
-        proc.stderr
-            .pipe(new LoggerHighlightTransform())
-            .pipe(process.stderr);
+            .pipe(process.stdout));
     }
     proc.on("exit", (statusCode) => {
         if (statusCode == 0) {
@@ -88,8 +82,7 @@ async function restart(state, build, compile) {
     log("Started new process.");
 }
 export async function copyMods(state) {
-    for (const mod of state.externalMods) {
-        //TODO do this concurrently
+    const modTasks = state.externalMods.map(async (mod) => {
         if (mod.type == "java") {
             //Maybe build the directory
             if (state.buildMods) {
@@ -109,7 +102,8 @@ export async function copyMods(state) {
             else {
                 log(`Copying java mod directory "${mod.path}"`);
             }
-            const modFileName = fs.readdirSync(path.join(mod.path, "build", "libs")).filter(n => n.endsWith(".jar"))[0];
+            const modFileName = (await fsP.readdir(path.join(mod.path, "build", "libs")))
+                .filter(n => n.endsWith(".jar"))[0];
             const modFilePath = path.join(mod.path, "build", "libs", modFileName);
             if (!fs.existsSync(modFilePath)) {
                 if (state.buildMods) {
@@ -121,7 +115,7 @@ export async function copyMods(state) {
             }
             else {
                 const modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                fs.copyFileSync(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
+                await fsP.copyFile(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
             }
         }
         else if (mod.type == "dir") {
@@ -137,7 +131,13 @@ export async function copyMods(state) {
             log(`Copying modfile "${mod.path}"`);
             fs.copyFileSync(mod.path, path.join(state.modsDirectory, modname[0] + path.extname(mod.path)));
         }
-    }
+    });
+    if (state.settings.buildModsConcurrently)
+        await Promise.all(modTasks);
+    else
+        for (const modTask of modTasks) {
+            await modTask;
+        }
 }
 export const versionUrls = {
     foo: {
@@ -279,12 +279,9 @@ export async function compileDirectory(path) {
     const gradleProcess = spawn(`${path}/gradlew.bat`, ["desktop:dist"], {
         cwd: path
     });
-    gradleProcess.stdout
+    [gradleProcess.stdout, gradleProcess.stderr].forEach(stream => stream
         .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
-        .pipe(process.stdout);
-    gradleProcess.stderr
-        .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
-        .pipe(process.stderr);
+        .pipe(process.stdout));
     //Fancy promise stuff, wait until gradle exits
     const code = await new Promise(res => gradleProcess.on("exit", res));
     if (code == 0) {
@@ -307,8 +304,6 @@ export function launch(state) {
     //Apply more handlers
     if (state.settings.restartAutomaticallyOnModUpdate) {
         for (const mod of state.externalMods) {
-            //let file = fs.lstatSync(filepath).isDirectory() ? path.join(filepath, "build", "libs") : filepath;
-            //TODO this handling seems wrong
             if (mod.type == "file")
                 fs.watchFile(mod.path, () => {
                     log(`File change detected! (${mod.path})`);

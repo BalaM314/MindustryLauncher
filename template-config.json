@@ -33,6 +33,7 @@
 	"restartAutomaticallyOnModUpdate": false,
 	//Whether to watch the entire java mod directory instead of just the built jar.
 	"watchWholeJavaModDirectory": false,
+	"buildModsConcurrently": false,
 	"logging": {
 		//If you want to enable logging, change "enabled" to true, and change the path to where you want to put logs.
 		"path": "C:\\Mindustry\\logs\\",
