@@ -11,9 +11,10 @@ import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
 import { spawn, execSync } from "child_process";
-import { prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform, log, error, fatal, copyDirectory, askYesOrNo, downloadFile, parseJSONC, ANSIEscape, resolveRedirect, stringifyError } from "./funcs.js";
+import { prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform, log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect, stringifyError } from "./funcs.js";
+import { info } from "console";
 function startProcess(state) {
-    const proc = spawn("java", [...state.jvmArgs, `-jar`, state.jarFile.path, ...state.mindustryArgs], { shell: false });
+    const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     const d = new Date();
     if (state.settings.logging.enabled) {
         state.currentLogStream = fs.createWriteStream(path.join(`${state.settings.logging.path}`, `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`));
@@ -75,8 +76,8 @@ async function restart(state, build, compile) {
     state.mindustryProcess?.kill("SIGTERM"); //todo see if this causes issues
     state.buildMods = build;
     if (compile) {
-        if (state.jarFile.sourceDirectory) {
-            await compileDirectory(state.jarFile.sourceDirectory);
+        if (state.version.isSourceDirectory) {
+            await compileDirectory(state.version.path);
         }
         else {
             error("Cannot compile, launched version did not come from a source directory.");
@@ -88,6 +89,7 @@ async function restart(state, build, compile) {
 }
 export async function copyMods(state) {
     for (const mod of state.externalMods) {
+        //TODO do this concurrently
         if (mod.type == "java") {
             //Maybe build the directory
             if (state.buildMods) {
@@ -138,99 +140,113 @@ export async function copyMods(state) {
     }
 }
 export const versionUrls = {
-    vanilla: {
-        url: version => `https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`,
-        getLatestVersion: [`https://github.com/Anuken/Mindustry/releases/latest`, /(?<=\/tag\/v)(\d+(?:\.\d)?)/],
-        regex: /^(\d+(?:\.\d)?|latest)$/
-    },
     foo: {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${version}/desktop.jar`,
         getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, /(?<=\/tag\/)\d+/],
-        regex: /(?<=^foo-)(\d+|latest)$/i
+        prefix: "foo-",
+        numberValidator: /^(\d+|latest)$/d,
     },
     "foo-v6": {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/download/${version}/desktop.jar`,
         getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/latest`, /(?<=\/tag\/)\d+/],
-        regex: /(?<=^foo-v6-)(\d+|latest)$/i
+        prefix: "foo-v6-",
+        numberValidator: /^(\d+|latest)$/d,
     },
     be: {
         url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
         getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)\d+/],
-        regex: /(?<=be-)(\d+|latest)$/i
+        prefix: "be-",
+        numberValidator: /^(\d+|latest)$/d,
+    },
+    vanilla: {
+        url: version => `https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`,
+        getLatestVersion: [`https://github.com/Anuken/Mindustry/releases/latest`, /(?<=\/tag\/v)(\d+(?:\.\d)?)/],
+        prefix: "",
+        numberValidator: /^(\d+(?:\.\d+)?|latest)$/d,
     },
 };
-/**Returns the name of a version from input. */
-export function getVersion(input) {
-    for (const [name, versionData] of Object.entries(versionUrls)) {
-        if (versionData.regex.test(input))
-            return name;
+export class Version {
+    constructor(path, isCustom, isSourceDirectory, versionType = null, versionNumber = null) {
+        this.path = path;
+        this.isCustom = isCustom;
+        this.isSourceDirectory = isSourceDirectory;
+        this.versionType = versionType;
+        this.versionNumber = versionNumber;
     }
-    return null;
-}
-export function getJarFilePath(version, settings) {
-    const customVersion = settings.mindustryJars.customVersionNames[version];
-    //Use the custom version name if it exists, otherwise "v${version}.jar";
-    const jarPath = customVersion ?? `v${version}.jar`;
-    //If the jar name has a / or \ in it then use it as an absolute path, otherwise relative to folderPath.
-    return {
-        filepath: (jarPath
-            .match(/[/\\]/gi) ? jarPath : path.join(settings.mindustryJars.folderPath, jarPath))
-            .replace(/%[^ %]+?%/g, (text) => process.env[text.split("%")[1]] ?? text),
-        customVersion: customVersion != undefined
-    };
-}
-export async function getLatestVersion(name) {
-    const versionData = versionUrls[name];
-    const resolvedUrl = await resolveRedirect(versionData.getLatestVersion[0]);
-    const result = versionData.getLatestVersion[1].exec(resolvedUrl);
-    if (result == null || result[1] == undefined)
-        throw new Error(`regex /${versionData.regex.source}/ did not match resolved url ${resolvedUrl} for version ${name}`);
-    return result[1];
-}
-export function lookupDownloadUrl(version, versionName) {
-    return new Promise((resolve, reject) => {
-        const versionData = versionUrls[versionName];
-        if (versionData.regex.test(version)) {
-            const result = version.match(versionData.regex);
-            if (result == null || result[1] == undefined)
-                throw new Error(`versionUrls ast for version ${versionName} is invalid; regex /${versionData.regex.source}/ matched ${version} but didn't have a capture group`);
-            log(`Looking up download url for ${versionName} version ${result[1]}`);
-            if (result[1] == "latest") {
-                resolveRedirect(versionData.getLatestVersion[0])
-                    .then(resolvedUrl => {
-                    const result = versionData.getLatestVersion[1].exec(resolvedUrl);
-                    if (result == null || result[1] == undefined)
-                        throw new Error(`versionUrls ast for version ${versionName} is invalid; regex /${versionData.regex.source}/ matched ${version} but didn't have a capture group`);
-                    log(`Looking up download url for ${versionName} version ${result[1]}`);
-                    resolveRedirect(versionData.url(result[1]))
-                        .then((url) => resolve({
-                        url, jarName: `v${versionName == "vanilla" ? "" : (versionName + "-")}${result[1]}.jar`
-                    })).catch(reject);
-                });
-            }
-            else {
-                resolveRedirect(versionData.url(result[1]))
-                    .then((url) => resolve({
-                    url, jarName: `v${versionName == "vanilla" ? "" : (versionName + "-")}${result[1]}.jar`
-                })).catch(reject);
+    static async fromInput(version, state) {
+        let filepath, isCustom = false, isSourceDirectory = false, versionType = null, versionNumber = null;
+        if (state.settings.mindustryJars.customVersionNames[version]) {
+            isCustom = true;
+            filepath = state.settings.mindustryJars.customVersionNames[version];
+            if (!fs.existsSync(filepath))
+                fatal(`Invalid custom version ${version}: specified filepath ${path} does not exist.`);
+            if (fs.lstatSync(filepath).isDirectory()) {
+                try {
+                    fs.accessSync(path.join(filepath, "/desktop/build.gradle"));
+                }
+                catch (err) {
+                    fatal(`Invalid custom version ${version}: Unable to find a build.gradle in ${path}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+                }
+                isSourceDirectory = true;
             }
         }
         else {
-            reject(`Invalid version ${version}`);
+            for (const [name, versionData] of Object.entries(versionUrls)) {
+                if (version.startsWith(versionData.prefix)) {
+                    const potentialVersionNumber = version.replace(versionData.prefix, "");
+                    if (!versionData.numberValidator.test(potentialVersionNumber))
+                        continue;
+                    versionType = name;
+                    versionNumber = potentialVersionNumber;
+                }
+            }
+            if (versionType == null || versionNumber == null)
+                fatal(`Invalid version ${version}`);
+            if (versionNumber == "latest") {
+                info(`Resolving version latest...`);
+                versionNumber = await this.getLatestVersion(versionType);
+                info(`Resolved version ${version} to ${versionType}-${versionNumber}`);
+            }
+            filepath = path.join(state.settings.mindustryJars.folderPath, `v${versionUrls[versionType].prefix}${versionNumber}.jar`);
         }
-    });
-}
-export async function handleDownload(state, specifiedVersion) {
-    const versionName = getVersion(specifiedVersion);
-    if (versionName == null) {
-        error("Cannot download: unknown version.");
-        return false;
+        return new this(filepath, isCustom, isSourceDirectory);
     }
-    if (await askYesOrNo("Would you like to download the file? [y/n]:")) {
+    jarFilePath() {
+        if (this.isSourceDirectory) {
+            return path.join(this.path, Version.builtJarLocation);
+        }
+        else {
+            return this.path;
+        }
+    }
+    exists() {
+        return fs.existsSync(this.jarFilePath());
+    }
+    name() {
+        if (this.isSourceDirectory)
+            return `[Source directory at ${this.path}]`;
+        if (this.isCustom)
+            return `[custom version]`;
+        if (!this.versionNumber || !this.versionType)
+            fatal("versionNumber should exist");
+        return `${this.versionType}-${this.versionNumber}`;
+    }
+    async getDownloadUrl() {
+        if (this.versionType == null || this.versionNumber == null)
+            throw new Error(`Logic error caused by ${this.versionType} at lookupDownloadUrl`);
+        const versionData = versionUrls[this.versionType];
+        log(`Looking up download url for ${this.versionType} version ${this.versionNumber}`);
+        if (this.versionNumber == "latest")
+            throw new Error("Logic error: version's number was 'latest'.");
+        return {
+            url: await resolveRedirect(versionData.url(this.versionNumber)),
+            jarName: `v${versionData.prefix}${this.versionNumber}.jar`
+        };
+    }
+    async download(state) {
         try {
-            const { url, jarName } = await lookupDownloadUrl(specifiedVersion, versionName);
+            const { url, jarName } = await this.getDownloadUrl();
             const filePath = path.join(state.settings.mindustryJars.folderPath, jarName);
-            //TODO change filepath if version is latest
             log("Downloading...");
             await downloadFile(url, filePath);
             log(`File downloaded to ${filePath}.`);
@@ -241,9 +257,16 @@ export async function handleDownload(state, specifiedVersion) {
             return false;
         }
     }
-    else
-        return false;
+    static async getLatestVersion(name) {
+        const versionData = versionUrls[name];
+        const resolvedUrl = await resolveRedirect(versionData.getLatestVersion[0]);
+        const result = versionData.getLatestVersion[1].exec(resolvedUrl);
+        if (result == null || result[1] == undefined)
+            throw new Error(`regex /${versionData.getLatestVersion[1]}/ did not match resolved url ${resolvedUrl} for version ${name}`);
+        return result[1];
+    }
 }
+Version.builtJarLocation = "build/libs/Mindustry.jar";
 export async function compileDirectory(path) {
     try {
         fs.accessSync(`${path}/desktop/build.gradle`);
@@ -295,8 +318,9 @@ export function launch(state) {
                 restart(state, false, true);
                 break;
             case "?":
+            case "h":
             case "help":
-                log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help', 'exit'`);
+                log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help/h/?', 'exit/e'`);
                 break;
             case "exit":
             case "e":
@@ -341,7 +365,7 @@ function validateSettings(input, username) {
         for (const [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)) {
             if (jarName.includes(" ")) {
                 error(`Jar name for version ${version} contains a space.`);
-                error(`Run "mindustry --config" to change settings.`);
+                error(`Run "mindustry config" to change settings.`);
                 process.exit(1);
             }
         }
@@ -351,7 +375,7 @@ function validateSettings(input, username) {
         }
         if (!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory())) {
             error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
-            error(`Run "mindustry --config" to change settings.`);
+            error(`Run "mindustry config" to change settings.`);
             process.exit(1);
         }
     }
@@ -407,8 +431,6 @@ export function init(opts, app) {
         jvmArgs: settings.jvmArgs.concat(opts.positionalArgs),
         externalMods,
         buildMods: "buildMods" in opts.namedArgs,
-        jarFile: {
-            path: ""
-        }
+        version: null //TODO this is probably bad
     };
 }

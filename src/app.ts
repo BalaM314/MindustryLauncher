@@ -12,8 +12,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application } from "cli-app";
-import { askQuestion, error, fatal, log, stringifyError, throwIfError } from "./funcs.js";
-import { compileDirectory, copyMods, getJarFilePath, handleDownload, init, launch } from "./mindustrylauncher.js";
+import { askQuestion, askYesOrNo, error, fatal, log, stringifyError, throwIfError } from "./funcs.js";
+import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 
 
 export const mindustrylauncher = new Application("mindustrylauncher", "A launcher for Mindustry built with Node and TS.");
@@ -61,41 +61,37 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
 
 mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => {
 	const state = init(opts, app);
-	const { filepath, customVersion } = getJarFilePath(opts.namedArgs.version, state.settings);
-	let jarFilePath;
-	if(!fs.existsSync(filepath)){
-		error(`Unable to access file "${filepath}".`);
-		if(customVersion){
-			error("Cannot download: custom version specified.");
-			return 1;
-		}
-		const downloaded = await handleDownload(state, opts.namedArgs.version);
-		if(!downloaded) return 1;
-		//Download was successful
-		if(fs.existsSync(filepath)) state.jarFile.path = filepath;
-		else fatal(`Downloaded file doesn't exist! Attempted to download version ${opts.namedArgs.version} to ${filepath}`);
-	}
+
+	state.version = await Version.fromInput(opts.namedArgs.version, state);
 	
-	if(filepath.match(/[/\\]$/i)){//If the filepath is a directory
+	if(state.version.isSourceDirectory){
 		if("compile" in opts.namedArgs){
-			const output = await compileDirectory(filepath);
-			if(!output) return false;
+			const output = await compileDirectory(state.version.path);
+			if(!output) return 1;
 		}
-		state.jarFile.sourceDirectory = filepath;
-		state.jarFile.path = path.join(filepath, `desktop/build/libs/Mindustry.jar`);
-		try {
-			fs.accessSync(state.jarFile.path);
-		} catch(err){
+		if(!state.version.exists()){
 			if("compile" in opts.namedArgs)
-				error(`Unable to find a Mindustry.jar in ${jarFilePath}. Are you sure this is a Mindustry source directory?`);
+				error(`Unable to find a Mindustry.jar in ${state.version.jarFilePath()}. Are you sure this is a Mindustry source directory?`);
 			else
-				error(`Unable to find a Mindustry.jar in ${jarFilePath}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
+				error(`Unable to find a Mindustry.jar in ${state.version.jarFilePath()}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
 			return 1;
 		}
 		//Jar file exists, all good
-	} else {
-		//It's just a regular file, we already checked that it exists
-		state.jarFile.path = filepath;
+	}
+
+	if(!state.version.exists()){
+		error(`Version ${state.version.name()} has not been downloaded.`);
+		if(state.version.isCustom){
+			throw new Error(`Logic error: nonexistent custom version not caught in fromInput`);
+		}
+		if(await askYesOrNo("Would you like to download the file? [y/n]:")){
+			const downloaded = state.version.download(state);
+			if(!downloaded) return 1;
+			//Download was successful
+			if(!state.version.exists()) fatal(`Downloaded file doesn't exist! Attempted to download version ${opts.namedArgs.version} to ${state.version.jarFilePath()}`);
+		} else {
+			return 1;
+		}
 	}
 
 	copyMods(state);

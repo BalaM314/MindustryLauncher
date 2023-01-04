@@ -10,6 +10,7 @@ Contains the mindustrylauncher Application.
 
 import { ChildProcess } from "child_process";
 import * as fs from "fs";
+import { Version } from "./mindustrylauncher";
 
 
 
@@ -50,12 +51,7 @@ export interface State {
 	currentLogStream: fs.WriteStream | null;
 	mindustryArgs: string[];
 	jvmArgs: string[];
-	jarFile: {
-		/**The path to the selected Mindustry jar file. */
-		path: string;
-		/**The path of the Mindustry source directory, if specified. */
-		sourceDirectory?: string;
-	}
+	version: Version;
 	externalMods: {
 		path: string;
 		type: "file" | "dir" | "java" | "invalid";
