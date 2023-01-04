@@ -20,11 +20,13 @@ A custom launcher for Mindustry built with TypeScript and Node.
 Requirements: Node.JS and NPM
 
 1. Run `npm i -g github:BalaM314/MindustryLauncher`
-2. Run `mindustry --config`.
+2. Run `mindustry config`.
 
 better installation coming soon
 
 ## Usage
 CLI only.
 
-`mindustry [--help] [--compile] [--buildMods] --version <version> [-- jvmArgs...]`
+`mindustry [--compile] [--buildMods] --version <version> [-- jvmArgs...]`
+
+Run `mindustry help` for more information.
