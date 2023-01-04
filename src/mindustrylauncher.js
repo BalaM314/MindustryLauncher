@@ -302,38 +302,8 @@ export function launch(state) {
         log(`Arguments: ${state.mindustryArgs}`);
     }
     state.mindustryProcess = startProcess(state);
-    //Apply handlers TODO refactor out
-    process.stdin.on("data", (data) => {
-        switch (data.toString("utf-8").slice(0, -2)) { //Input minus the \r\n at the end.
-            case "rs":
-            case "restart":
-                restart(state, false, false);
-                break;
-            case "rb":
-            case "rebuild":
-                restart(state, true, false);
-                break;
-            case "rc":
-            case "recompile":
-                restart(state, false, true);
-                break;
-            case "?":
-            case "h":
-            case "help":
-                log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help/h/?', 'exit/e'`);
-                break;
-            case "exit":
-            case "e":
-                log("Exiting...");
-                state.mindustryProcess?.removeAllListeners();
-                state.mindustryProcess?.kill("SIGTERM");
-                process.exit(0);
-                break;
-            default:
-                log("Unknown command.");
-                break;
-        }
-    });
+    //Apply command handler
+    process.stdin.on("data", data => handleCommand(data.toString().slice(0, -2), state));
     //Apply more handlers
     if (state.settings.restartAutomaticallyOnModUpdate) {
         for (const mod of state.externalMods) {
@@ -355,6 +325,47 @@ export function launch(state) {
                     restart(state, true, false);
                 });
         }
+    }
+}
+export function handleCommand(input, state) {
+    switch (input.split(" ")[0]) {
+        case "rs":
+        case "restart":
+            restart(state, false, false);
+            break;
+        case "rb":
+        case "rebuild":
+            restart(state, true, false);
+            break;
+        case "rc":
+        case "recompile":
+            restart(state, false, true);
+            break;
+        case "?":
+        case "h":
+        case "help":
+            log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help/h/?', 'exit/e'`);
+            break;
+        case "exit":
+        case "e":
+            log("Exiting...");
+            state.mindustryProcess?.removeAllListeners();
+            state.mindustryProcess?.kill("SIGTERM");
+            process.exit(0);
+            break;
+        case "pass":
+        case "-":
+        case "p":
+            if (state.mindustryProcess?.stdin?.writable) {
+                state.mindustryProcess.stdin.write(input.split(" ").slice(1).join(" ") + "\r\n");
+            }
+            else {
+                log("Error: Stream not writeable.");
+            }
+            break;
+        default:
+            log("Unknown command.");
+            break;
     }
 }
 function validateSettings(input, username) {
