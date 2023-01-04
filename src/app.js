@@ -81,7 +81,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
             throw new Error(`Logic error: nonexistent custom version not caught in fromInput`);
         }
         if (await askYesOrNo("Would you like to download the file? [y/n]:")) {
-            const downloaded = state.version.download(state);
+            const downloaded = await state.version.download(state);
             if (!downloaded)
                 return 1;
             //Download was successful

@@ -142,19 +142,19 @@ export async function copyMods(state) {
 export const versionUrls = {
     foo: {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${version}/desktop.jar`,
-        getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, /(?<=\/tag\/)\d+/],
+        getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "foo-",
         numberValidator: /^(\d+|latest)$/d,
     },
     "foo-v6": {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/download/${version}/desktop.jar`,
-        getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/latest`, /(?<=\/tag\/)\d+/],
+        getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "foo-v6-",
         numberValidator: /^(\d+|latest)$/d,
     },
     be: {
         url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
-        getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)\d+/],
+        getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "be-",
         numberValidator: /^(\d+|latest)$/d,
     },
@@ -203,13 +203,13 @@ export class Version {
             if (versionType == null || versionNumber == null)
                 fatal(`Invalid version ${version}`);
             if (versionNumber == "latest") {
-                info(`Resolving version latest...`);
+                info(`Getting latest ${versionType} version...`);
                 versionNumber = await this.getLatestVersion(versionType);
                 info(`Resolved version ${version} to ${versionType}-${versionNumber}`);
             }
             filepath = path.join(state.settings.mindustryJars.folderPath, `v${versionUrls[versionType].prefix}${versionNumber}.jar`);
         }
-        return new this(filepath, isCustom, isSourceDirectory);
+        return new this(filepath, isCustom, isSourceDirectory, versionType, versionNumber);
     }
     jarFilePath() {
         if (this.isSourceDirectory) {
@@ -262,11 +262,11 @@ export class Version {
         const resolvedUrl = await resolveRedirect(versionData.getLatestVersion[0]);
         const result = versionData.getLatestVersion[1].exec(resolvedUrl);
         if (result == null || result[1] == undefined)
-            throw new Error(`regex /${versionData.getLatestVersion[1]}/ did not match resolved url ${resolvedUrl} for version ${name}`);
+            throw new Error(`regex /${versionData.getLatestVersion[1].source}/ did not match resolved url ${resolvedUrl} for version ${name}`);
         return result[1];
     }
 }
-Version.builtJarLocation = "build/libs/Mindustry.jar";
+Version.builtJarLocation = "desktop/build/libs/Mindustry.jar";
 export async function compileDirectory(path) {
     try {
         fs.accessSync(`${path}/desktop/build.gradle`);
