@@ -71,7 +71,11 @@ async function restart(state, build, compile) {
     state.buildMods = build;
     if (compile) {
         if (state.version.isSourceDirectory) {
-            await compileDirectory(state.version.path);
+            const successful = await compileDirectory(state.version.path);
+            if (!successful) {
+                error("Build failed.");
+                process.exit(1);
+            }
         }
         else {
             error("Cannot compile, launched version did not come from a source directory.");
