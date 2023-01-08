@@ -9,10 +9,11 @@ Contains the mindustrylauncher Application.
 */
 
 import * as fs from "fs";
+import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application } from "cli-app";
-import { askQuestion, askYesOrNo, error, fatal, log, stringifyError, throwIfError } from "./funcs.js";
+import { askQuestion, askYesOrNo, error, fatal, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 
 
@@ -58,6 +59,26 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
 	}
 	return 0;
 });
+
+mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {
+	const state = init(opts, app);
+	if("info" in opts.namedArgs){
+		const files = (await fsP.readdir(state.settings.logging.path)).map(filename => path.join(state.settings.logging.path, filename));
+		const fileData = await Promise.all(files.map(file => fsP.stat(file)));
+		log(
+`You have ${files.length} log files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`
+		);
+	} else {
+		spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.logging.path]);
+	}
+}, false, {
+	namedArgs: {
+		info: {
+			needsValue: false,
+			description: "Shows information about your logs instead of the logs folder."
+		}
+	}
+}, ["l"]);
 
 mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => {
 	const state = init(opts, app);
