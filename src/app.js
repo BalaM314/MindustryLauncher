@@ -57,7 +57,7 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
         }
     }
     return 0;
-});
+}, false, {}, ["c"]);
 mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {
     const state = init(opts, app);
     if ("info" in opts.namedArgs) {
@@ -129,5 +129,10 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
             needsValue: false
         }
     },
-    positionalArgs: []
+    positionalArgs: [],
+    aliases: {
+        c: "compile",
+        v: "version",
+        b: "buildMods",
+    }
 });
