@@ -117,7 +117,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
 }, true, {
     namedArgs: {
         version: {
-            description: "The version to be launch. Can be a vanilla, foo, or be version, which can specify the version number or \"latest\".",
+            description: "The version to launch, like 141.3, be-22456, foo-latest, foo-v6-1000, etc",
             required: true,
         },
         compile: {
