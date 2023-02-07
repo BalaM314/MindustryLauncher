@@ -6,7 +6,7 @@ A custom launcher for Mindustry built with TypeScript and Node.
 * [x] Logging
 * [x] Version selection
 * [x] Automatic version download
-* [x] Build and copy external mods (configurable)
+* [x] Build/copy external mods and restart (configurable)
 * [x] Restart automatically on mod file change (configurable)
 * [x] Relaunch on command
 * [x] Highly configurable
@@ -21,8 +21,6 @@ Requirements: Node.JS and NPM
 
 1. Run `npm i -g github:BalaM314/MindustryLauncher`
 2. Run `mindustry config`.
-
-better installation coming soon
 
 ## Usage
 CLI only.
