@@ -169,7 +169,7 @@ export const versionUrls = {
         numberValidator: /^(\d+(?:\.\d+)?|latest)$/d,
     },
 };
-export class Version {
+class Version {
     constructor(path, isCustom, isSourceDirectory, versionType = null, versionNumber = null) {
         this.path = path;
         this.isCustom = isCustom;
@@ -271,6 +271,7 @@ export class Version {
     }
 }
 Version.builtJarLocation = "desktop/build/libs/Mindustry.jar";
+export { Version };
 export async function compileDirectory(path) {
     try {
         fs.accessSync(`${path}/desktop/build.gradle`);
