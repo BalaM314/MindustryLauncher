@@ -463,6 +463,9 @@ export function init(opts:Options, app:Application):State {
 				: "file"
 			: (error(`External mod "${modPath}" does not exist.`), "invalid") as "java" | "dir" | "file" | "invalid"
 	}));
+	const jvmArgs = opts.positionalArgs.includes("--")
+		? opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1)
+		: [];
 
 	return {
 		settings,
@@ -474,7 +477,7 @@ export function init(opts:Options, app:Application):State {
 		username,
 		namedArgs: opts.namedArgs,
 		mindustryArgs: settings.processArgs,
-		jvmArgs: settings.jvmArgs.concat(opts.positionalArgs),
+		jvmArgs: settings.jvmArgs.concat(jvmArgs),
 		externalMods,
 		buildMods: "buildMods" in opts.namedArgs,
 		version: null!//TODO this is probably bad
