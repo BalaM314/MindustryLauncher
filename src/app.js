@@ -32,6 +32,42 @@ mindustrylauncher.command("version", "Displays the version of MindustryLauncher.
         return 1;
     }
 }, false, {}, ["v"]);
+mindustrylauncher.command("versions", "Opens the versions folder.", async (opts, app) => {
+    const state = init(opts, app);
+    if ("info" in opts.namedArgs) {
+        const jarFiles = (await fsP.readdir(state.settings.mindustryJars.folderPath))
+            .filter(filename => filename.startsWith("v") && path.extname(filename) == ".jar");
+        //Only show mindustry version jar files
+        const fileData = await Promise.all(jarFiles.map(file => fsP.stat(path.join(state.settings.mindustryJars.folderPath, file))));
+        log(`List of installed versions:
+${jarFiles.map(f => f.split(".")[0]).join(", ")}
+You have ${jarFiles.length} version files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
+    }
+    else {
+        log(`Opening versions folder: ${state.settings.mindustryJars.folderPath}\nUse --info to get information about installed versions.`);
+        spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.mindustryJars.folderPath]);
+    }
+}, false, {
+    namedArgs: {
+        info: {
+            needsValue: false,
+            description: "Shows information about your versions instead of opening the versions folder.",
+            aliases: ["i"]
+        }
+    }
+}, ["vs"]);
+mindustrylauncher.command("mods", "Opens the mods folder.", async (opts, app) => {
+    const state = init(opts, app);
+    spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.mindustryJars.folderPath]);
+}, false, {
+    namedArgs: {
+        info: {
+            needsValue: false,
+            description: "Shows information about your mods instead of opening the mods folder.",
+            aliases: ["i"]
+        }
+    }
+}, ["m"]);
 mindustrylauncher.command("config", "Opens the launcher's config.json file.", (opts, app) => {
     const state = init(opts, app);
     const settingsPath = path.join(state.launcherDataPath, "config.json");
@@ -61,7 +97,8 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
 mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {
     const state = init(opts, app);
     if ("info" in opts.namedArgs) {
-        const files = (await fsP.readdir(state.settings.logging.path)).map(filename => path.join(state.settings.logging.path, filename));
+        const files = (await fsP.readdir(state.settings.logging.path))
+            .map(filename => path.join(state.settings.logging.path, filename));
         const fileData = await Promise.all(files.map(file => fsP.stat(file)));
         log(`You have ${files.length} log files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
     }
@@ -72,7 +109,8 @@ mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => 
     namedArgs: {
         info: {
             needsValue: false,
-            description: "Shows information about your logs instead of the logs folder."
+            description: "Shows information about your logs instead of the logs folder.",
+            aliases: ["i"]
         }
     }
 }, ["l"]);
