@@ -28,6 +28,7 @@ export const ANSIEscape = {
 	"reset": `\u001b[0m`,
 	"brightpurple": `\u001b[0;95m`
 };
+const commandColor = ANSIEscape.reset;
 
 export class LauncherError extends Error {
 	constructor(message?:string){
@@ -37,14 +38,14 @@ export class LauncherError extends Error {
 }
 
 export function log(message:string){
-	console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}`);
+	console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}${commandColor}`);
 }
 export function error(message:string){
-	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}${ANSIEscape.reset}`);
+	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}${commandColor}`);
 }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function debug(message:string){
-	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}`);
+	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
 export function fatal(message:string):never {
 	throw new LauncherError(message);
@@ -74,16 +75,23 @@ export function getTimeComponent(color:boolean){
 		return `[${new Date().toTimeString().split(" ")[0]}]`;
 }
 export function formatLine(line:string){
-	return `${getTimeComponent(true)} ${getLogHighlight(line[1])}${line}`;
+	return `${getTimeComponent(true)} ${getLogHighlight(line[1])}${line}${commandColor}`;
 }
 
-/**Creates a (? extends Stream.Transform) class from a function that processes one line at a time. */
+/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
 export function streamTransform(transformFunction: (text:string, chunkIndex:number) => string){
+	return streamTransformState<never>((text, chunkIndex) => [transformFunction(text, chunkIndex), null!]);
+}
+
+/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
+export function streamTransformState<T>(transformFunction: (text:string, chunkIndex:number, state:T | null) => [output:string, state:T], def:T | null = null){
 	return class extends Stream.Transform {
 		private _line: string;
+		private state: T | null;
 		constructor(opts?:TransformOptions){
 			super(opts);
 			this._line = "";
+			this.state = def;
 		}
 		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
 			this._line += chunk.toString();
@@ -93,7 +101,11 @@ export function streamTransform(transformFunction: (text:string, chunkIndex:numb
 				lines
 					.slice(0, -1)
 					.map(line => line + "\n")
-					.map(transformFunction)
+					.map((text, chunkIndex) => {
+						const [out, state] = transformFunction(text, chunkIndex, this.state);
+						this.state = state;
+						return out;
+					})
 					.join("")
 			);
 			this._line = lines.at(-1)!;
@@ -101,8 +113,14 @@ export function streamTransform(transformFunction: (text:string, chunkIndex:numb
 	};
 }
 
-export const LoggerHighlightTransform = streamTransform(
-	(line, index) => (line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `:          ${line}`)
+export const LoggerHighlightTransform = streamTransformState<string | null>(
+	(line, index, state) => {
+		const output = line.match(/^\[\w\]/) || index == 0 ? formatLine(line) : `${state ?? ""}:          ${line}${commandColor}`;
+		if(line.match(/^\[(\w)\]/)){
+			state = getLogHighlight(line.match(/^\[(\w)\]/)![1]);
+		}
+		return [output, state];
+	}, ANSIEscape.white
 );
 export function prependTextTransform(text: string | (() => string)){
 	return streamTransform((line) => `${text instanceof Function ? text() : text} ${line}`);
