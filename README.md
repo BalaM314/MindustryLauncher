@@ -1,6 +1,7 @@
 # MindustryLauncher
 A custom launcher for Mindustry built with TypeScript and Node.
-![image](https://user-images.githubusercontent.com/71201189/167357688-f3e038b4-d67e-4019-aef0-8a7e57a38669.png)
+![image](https://github.com/BalaM314/MindustryLauncher/assets/71201189/148c8ece-25a1-46a0-8e35-168a4e8a2eb3)
+
 
 ## Features
 * [x] Logging
