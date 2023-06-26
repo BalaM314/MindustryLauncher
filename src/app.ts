@@ -82,7 +82,7 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
 		throwIfError(spawnSync("code.cmd", [settingsPath]));
 		log(`Editor closed.`);
 	} catch(err){
-		error(stringifyError(err));
+		if(!stringifyError(err).includes("ENOENT")) error(stringifyError(err));
 		try {
 			throwIfError(spawnSync("notepad", [settingsPath]));
 			log(`Editor closed.`);
