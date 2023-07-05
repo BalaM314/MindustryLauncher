@@ -15,6 +15,7 @@ A custom launcher for Mindustry built with TypeScript and Node.
 * [x] Compile a source directory before launching or when restarting (configurable)
 * [x] Output highlighting
 * [x] Remove username from logs (configurable)
+* [x] Default JVM args (configurable)
 
 ## Installation
 
