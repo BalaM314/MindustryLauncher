@@ -58,13 +58,42 @@ You have ${jarFiles.length} version files, taking up a total file size of ${form
 }, ["vs"]);
 mindustrylauncher.command("mods", "Opens the mods folder.", async (opts, app) => {
     const state = init(opts, app);
-    spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.mindustryJars.folderPath]);
+    if ("info" in opts.namedArgs) {
+        const modData = await fsP.readdir(state.modsDirectory);
+        const fileData = await Promise.all(modData.map(file => fsP.stat(path.join(state.modsDirectory, file))));
+        log(`List of installed mods:
+${modData.join(", ")}
+You have ${modData.length} mod files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
+    }
+    else if ("disable" in opts.namedArgs) {
+        const modData = await fsP.readdir(state.modsDirectory);
+        const modfile = modData.find(f => f.toLowerCase().includes(opts.namedArgs["disable"]));
+        if (modfile) {
+            const modfilePath = path.join(state.modsDirectory, modfile);
+            if ((await fsP.stat(modfilePath)).isFile()) {
+                fsP.rename(modfilePath, modfilePath + ".disabled");
+                log(`Disabled mod ${modfile}`);
+            }
+            else {
+                error(`Cannot disable a directory mod.`);
+            }
+        }
+    }
+    else {
+        log(`Opening mods folder: ${state.modsDirectory}\nUse --info to get information about installed mods.`);
+        spawnSync(process.platform == "win32" ? "explorer" : "open", [state.modsDirectory]);
+    }
 }, false, {
     namedArgs: {
         info: {
             needsValue: false,
             description: "Shows information about your mods instead of opening the mods folder.",
             aliases: ["i"]
+        },
+        disable: {
+            description: "Force disable a mod by putting .disabled in the file extension.",
+            aliases: ["d"],
+            required: false
         }
     }
 }, ["m"]);
