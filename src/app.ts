@@ -13,7 +13,7 @@ import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application } from "cli-app";
-import { askQuestion, askYesOrNo, error, fatal, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
+import { LauncherError, askQuestion, askYesOrNo, error, fatal, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 
 
@@ -156,8 +156,17 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
 		}
 	}
 
-	copyMods(state);
-	launch(state);
+	try {
+		await copyMods(state);
+		launch(state);
+	} catch(err){
+		if(err instanceof LauncherError){
+			error(err.message);
+			return 1;
+		} else {
+			throw err;
+		}
+	}
 	//copy mods and launch
 }, true, {
 	namedArgs: {
