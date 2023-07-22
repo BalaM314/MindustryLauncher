@@ -128,7 +128,7 @@ export function prependTextTransform(text: string | (() => string)){
 
 /**Removes a word from logs. Useful to hide your Windows username.*/
 export class CensorKeywordTransform extends Stream.Transform {
-	constructor(public keyword:string, public replace:string, opts?:TransformOptions){
+	constructor(public keyword:string | RegExp, public replace:string, opts?:TransformOptions){
 		super(opts);
 	}
 	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback):void {

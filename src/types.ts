@@ -31,6 +31,7 @@ export interface Settings {
 		path: string;
 		enabled: boolean;
 		removeUsername: boolean;
+		removeUUIDs: boolean;
 	};
 }
 

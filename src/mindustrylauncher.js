@@ -20,15 +20,14 @@ function startProcess(state) {
     if (state.settings.logging.enabled) {
         state.currentLogStream = fs.createWriteStream(path.join(`${state.settings.logging.path}`, `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`));
         //Creates a write stream and pipes the output of the mindustry process into it.
+        let temp = proc.stdout;
         if (state.settings.logging.removeUsername && state.username != null)
-            proc.stdout
-                .pipe(new (prependTextTransform(() => getTimeComponent(false))))
-                .pipe(new CensorKeywordTransform(state.username, "[USERNAME]"))
-                .pipe(state.currentLogStream);
-        else
-            proc.stdout
-                .pipe(new (prependTextTransform(() => getTimeComponent(false))))
-                .pipe(state.currentLogStream);
+            temp = proc.stdout.pipe(new CensorKeywordTransform(state.username, "[USERNAME]"));
+        if (state.settings.logging.removeUUIDs)
+            temp = proc.stdout.pipe(new CensorKeywordTransform(/[a-zA-Z0-9+/]{22}==/g, "[UUID]"));
+        temp
+            .pipe(new (prependTextTransform(() => getTimeComponent(false))))
+            .pipe(state.currentLogStream);
     }
     if (state.settings.logging.removeUsername && state.username != null) {
         [proc.stdout, proc.stderr].forEach(stream => stream

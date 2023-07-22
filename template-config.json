@@ -40,6 +40,8 @@
 		"enabled": false,
 		
 		//Removes your (windows)username from logs. Useful if it's your IRL name and you don't want it to show up in screenshots.
-		"removeUsername": true
+		"removeUsername": true,
+		//Removes everything that looks like a UUID from logs (but not console output).
+		"removeUUIDs": true
 	}
 }
