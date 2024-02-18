@@ -136,6 +136,40 @@ export class CensorKeywordTransform extends Stream.Transform {
 	}
 }
 
+/**
+ * Keeps a running average of some data.
+ */
+export class WindowedMean {
+	/** Queue to hold the data. */
+	data:[number, number][];
+	/** Index of the next place to insert an item into the queue. */
+	queuei:number = 0;
+	lastTime = -1;
+	
+	constructor(public maxWindowSize:number){
+		this.data = new Array(maxWindowSize).fill([0, 0]);
+	}
+
+	add(value:number){
+		if(this.lastTime != -1){
+			this.data[this.queuei++ % this.maxWindowSize] = [value, Math.max(1, Date.now() - this.lastTime)];
+		} //if there is no last time, discard the value
+		this.lastTime = Date.now();
+	}
+	mean(windowSize?:number):number | null;
+	mean<T>(windowSize:number, notEnoughDataValue:T):number | T;
+	mean<T>(windowSize = this.maxWindowSize, notEnoughDataValue?:T):number | T {
+		if(this.queuei < windowSize) return (notEnoughDataValue ?? null) as any; //overload 1
+		if(windowSize > this.maxWindowSize) throw new Error(`Cannot get average over the last ${windowSize} values becaue only ${this.maxWindowSize} values are stored`);
+		let total = 0;
+		const wrappedQueueI = this.queuei % this.maxWindowSize;
+		for(let i = wrappedQueueI - windowSize; i < wrappedQueueI; i ++){
+			if(i >= 0) total += this.data[i][0] / this.data[i][1];
+			else total += this.data[this.maxWindowSize + i][0] / this.data[this.maxWindowSize + i][1];
+		}
+		return total / windowSize;
+	}
+}
 
 
 export function askQuestion(query:string):Promise<string> {
@@ -189,7 +223,7 @@ export function stringifyError(err:unknown):string {
 	else return "invalid error";
 }
 
-export function downloadFile(url:string, outputPath:string){
+export function downloadFile(url:string, outputPath:string, changed?:(downloaded:number, total:number) => unknown){
 	return new Promise((resolve, reject) => {
 		https.get(url, (res) => {
 			if(res.statusCode == 404){
@@ -197,7 +231,18 @@ export function downloadFile(url:string, outputPath:string){
 			} else if(res.statusCode != 200){
 				reject(`Expected status code 200, got ${res.statusCode}`);
 			}
+			const totalSize = Number(res.headers["content-length"]);
 			const file = fs.createWriteStream(outputPath);
+			if(!isNaN(totalSize)){
+				let downloaded = 0;
+				changed?.(downloaded, totalSize);
+				res.on("data", (chunk) => {
+					if(chunk instanceof Buffer){
+						downloaded += chunk.length;
+						changed?.(downloaded, totalSize);
+					}
+				});
+			}
 			res.pipe(file);
 			file.on('finish', () => {
 				file.close();

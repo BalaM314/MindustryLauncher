@@ -12,7 +12,7 @@ import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as os from "os";
 import { spawn, execSync } from "child_process";
-import { prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform, log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect, stringifyError } from "./funcs.js";
+import { prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform, log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect, stringifyError, formatFileSize, WindowedMean } from "./funcs.js";
 import { info } from "console";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
@@ -168,7 +168,7 @@ export const versionUrls = {
         numberValidator: /^(\d+(?:\.\d+)?|latest)$/d,
     },
 };
-class Version {
+export class Version {
     constructor(path, isCustom, isSourceDirectory, versionType = null, versionNumber = null) {
         this.path = path;
         this.isCustom = isCustom;
@@ -251,7 +251,19 @@ class Version {
             const { url, jarName } = await this.getDownloadUrl();
             const filePath = path.join(state.settings.mindustryJars.folderPath, jarName);
             log("Downloading...");
-            await downloadFile(url, filePath);
+            console.log("");
+            const downloadSpeed = new WindowedMean(25);
+            await downloadFile(url, filePath, (downloaded, total) => {
+                downloadSpeed.add(downloaded);
+                if (process.stdout.columns > 50) {
+                    const barWidth = process.stdout.columns - 45;
+                    const barProgress = Math.floor(downloaded / total * barWidth);
+                    process.stdout.write(`\x1B[1A`);
+                    process.stdout.write(" ".repeat(process.stdout.columns));
+                    process.stdout.write(`\x1B[1A`);
+                    console.log(`  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0))}/s)`);
+                }
+            });
             log(`File downloaded to ${filePath}.`);
             return true;
         }
@@ -270,7 +282,6 @@ class Version {
     }
 }
 Version.builtJarLocation = "desktop/build/libs/Mindustry.jar";
-export { Version };
 export async function compileDirectory(path) {
     try {
         fs.accessSync(`${path}/desktop/build.gradle`);

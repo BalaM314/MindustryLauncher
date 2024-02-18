@@ -19,7 +19,9 @@ import { Application, Options } from "cli-app";
 import {
 	prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform,
 	log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect,
-	stringifyError
+	stringifyError,
+	formatFileSize,
+	WindowedMean
 } from "./funcs.js";
 import { State, Settings } from "./types.js";
 import { info } from "console";
@@ -277,7 +279,19 @@ export class Version {
 			const { url, jarName } = await this.getDownloadUrl();
 			const filePath = path.join(state.settings.mindustryJars.folderPath, jarName);
 			log("Downloading...");
-			await downloadFile(url, filePath);
+			console.log("");
+			const downloadSpeed = new WindowedMean(25);
+			await downloadFile(url, filePath, (downloaded, total) => {
+				downloadSpeed.add(downloaded);
+				if(process.stdout.columns > 50){
+					const barWidth = process.stdout.columns - 45;
+					const barProgress = Math.floor(downloaded / total * barWidth);
+					process.stdout.write(`\x1B[1A`);
+					process.stdout.write(" ".repeat(process.stdout.columns));
+					process.stdout.write(`\x1B[1A`);
+					console.log(`  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0))}/s)`);
+				}
+			});
 			log(`File downloaded to ${filePath}.`);
 			return true;
 		} catch(err){

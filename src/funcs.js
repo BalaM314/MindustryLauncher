@@ -118,6 +118,39 @@ export class CensorKeywordTransform extends Stream.Transform {
         callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
     }
 }
+/**
+ * Keeps a running average of some data.
+ */
+export class WindowedMean {
+    constructor(maxWindowSize) {
+        this.maxWindowSize = maxWindowSize;
+        /** Index of the next place to insert an item into the queue. */
+        this.queuei = 0;
+        this.lastTime = -1;
+        this.data = new Array(maxWindowSize).fill([0, 0]);
+    }
+    add(value) {
+        if (this.lastTime != -1) {
+            this.data[this.queuei++ % this.maxWindowSize] = [value, Math.max(1, Date.now() - this.lastTime)];
+        } //if there is no last time, discard the value
+        this.lastTime = Date.now();
+    }
+    mean(windowSize = this.maxWindowSize, notEnoughDataValue) {
+        if (this.queuei < windowSize)
+            return (notEnoughDataValue ?? null); //overload 1
+        if (windowSize > this.maxWindowSize)
+            throw new Error(`Cannot get average over the last ${windowSize} values becaue only ${this.maxWindowSize} values are stored`);
+        let total = 0;
+        const wrappedQueueI = this.queuei % this.maxWindowSize;
+        for (let i = wrappedQueueI - windowSize; i < wrappedQueueI; i++) {
+            if (i >= 0)
+                total += this.data[i][0] / this.data[i][1];
+            else
+                total += this.data[this.maxWindowSize + i][0] / this.data[this.maxWindowSize + i][1];
+        }
+        return total / windowSize;
+    }
+}
 export function askQuestion(query) {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -167,7 +200,7 @@ export function stringifyError(err) {
     else
         return "invalid error";
 }
-export function downloadFile(url, outputPath) {
+export function downloadFile(url, outputPath, changed) {
     return new Promise((resolve, reject) => {
         https.get(url, (res) => {
             if (res.statusCode == 404) {
@@ -176,7 +209,18 @@ export function downloadFile(url, outputPath) {
             else if (res.statusCode != 200) {
                 reject(`Expected status code 200, got ${res.statusCode}`);
             }
+            const totalSize = Number(res.headers["content-length"]);
             const file = fs.createWriteStream(outputPath);
+            if (!isNaN(totalSize)) {
+                let downloaded = 0;
+                changed?.(downloaded, totalSize);
+                res.on("data", (chunk) => {
+                    if (chunk instanceof Buffer) {
+                        downloaded += chunk.length;
+                        changed?.(downloaded, totalSize);
+                    }
+                });
+            }
             res.pipe(file);
             file.on('finish', () => {
                 file.close();
