@@ -318,7 +318,8 @@ export async function compileDirectory(path:string):Promise<boolean> {
 	}
 	log("Compiling...");
 	const gradleProcess = spawn(`${path}/gradlew.bat`, ["desktop:dist"], {
-		cwd: path
+		cwd: path,
+		shell: true
 	});
 	[gradleProcess.stdout, gradleProcess.stderr].forEach(stream => stream
 		.pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
