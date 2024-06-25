@@ -461,7 +461,8 @@ export function init(opts:Options, app:Application):State {
 				recursive: true
 			});
 		}
-		fs.copyFileSync("template-config.json", path.join(launcherDataPath, "config.json"), fs.constants.COPYFILE_EXCL);
+		const templateConfig = fs.readFileSync("template-config.json", "utf-8").replace("{{VERSIONSDIR}}", path.join(mindustryDirectory, "versions"));
+		fs.writeFileSync(templateConfig, path.join(launcherDataPath, "config.json"));
 		if(opts.commandName != "config") log("Currently using default settings: run `mindustry config` to edit the settings file.");
 	}
 	
