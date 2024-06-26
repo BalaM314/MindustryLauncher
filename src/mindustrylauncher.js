@@ -391,11 +391,13 @@ function validateSettings(input, username) {
                 process.exit(1);
             }
         }
-        if (!fs.existsSync(settings.logging.path)) {
-            throw new Error(`Logging path "${settings.logging.path}" does not exist.`);
-        }
-        if (!fs.lstatSync(settings.logging.path).isDirectory()) {
-            throw new Error(`Logging path "${settings.logging.path}" is not a directory.`);
+        if (settings.logging.enabled) {
+            if (!fs.existsSync(settings.logging.path)) {
+                throw new Error(`Logging path "${settings.logging.path}" does not exist.`);
+            }
+            if (!fs.lstatSync(settings.logging.path).isDirectory()) {
+                throw new Error(`Logging path "${settings.logging.path}" is not a directory.`);
+            }
         }
         if (username == null && settings.logging.removeUsername) {
             error("Could not determine your username, disabling logging.removeUsername");

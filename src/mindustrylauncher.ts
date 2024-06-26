@@ -416,11 +416,13 @@ function validateSettings(input:any, username:string | null):asserts input is Se
 			}
 		}
 
-		if(!fs.existsSync(settings.logging.path)){
-			throw new Error(`Logging path "${settings.logging.path}" does not exist.`);
-		}
-		if(!fs.lstatSync(settings.logging.path).isDirectory()){
-			throw new Error(`Logging path "${settings.logging.path}" is not a directory.`);
+		if(settings.logging.enabled){
+			if(!fs.existsSync(settings.logging.path)){
+				throw new Error(`Logging path "${settings.logging.path}" does not exist.`);
+			}
+			if(!fs.lstatSync(settings.logging.path).isDirectory()){
+				throw new Error(`Logging path "${settings.logging.path}" is not a directory.`);
+			}
 		}
 
 		if(username == null && settings.logging.removeUsername){
