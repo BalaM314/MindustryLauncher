@@ -26,12 +26,6 @@ export const ANSIEscape = {
     "brightpurple": `\u001b[0;95m`
 };
 const commandColor = ANSIEscape.reset;
-export class LauncherError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "LauncherError";
-    }
-}
 export function log(message) {
     console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}${commandColor}`);
 }
@@ -42,8 +36,17 @@ export function error(message) {
 export function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
-export function fatal(message) {
-    throw new LauncherError(message);
+export class AppError extends Error {
+    constructor() {
+        super(...arguments);
+        this.name = "AppError";
+    }
+}
+export function fail(message) {
+    throw new AppError(message);
+}
+export function crash(message) {
+    throw new AppError(message);
 }
 /**Returns the proper highlight color for a line based on the character inside [x] */
 export function getLogHighlight(char) {

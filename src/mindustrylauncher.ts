@@ -10,21 +10,15 @@ Contains functions that are part of the program code.
 
 
 
-import * as path from "path";
+import { execSync, spawn } from "child_process";
+import { info } from "console";
 import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as os from "os";
-import { spawn, execSync } from "child_process";
+import * as path from "path";
 import { Application, Options } from "cli-app";
-import {
-	prependTextTransform, getTimeComponent, CensorKeywordTransform, LoggerHighlightTransform,
-	log, error, fatal, copyDirectory, downloadFile, parseJSONC, ANSIEscape, resolveRedirect,
-	stringifyError,
-	formatFileSize,
-	WindowedMean
-} from "./funcs.js";
-import { State, Settings } from "./types.js";
-import { info } from "console";
+import { ANSIEscape, CensorKeywordTransform, AppError, LoggerHighlightTransform, WindowedMean, copyDirectory, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError, crash } from "./funcs.js";
+import { Settings, State } from "./types.js";
 
 
 
@@ -121,7 +115,7 @@ export async function copyMods(state:State){
 						cwd: mod.path
 					});
 				} catch(err){
-					fatal(`Build failed!`);
+					fail(`Build failed!`);
 				}
 				const timeTaken = Date.now() - preBuildTime;
 				log(`Built "${path.basename(mod.path)}" in ${timeTaken.toFixed(0)}ms`);
@@ -220,12 +214,12 @@ export class Version {
 		if(state.settings.mindustryJars.customVersionNames[version]){
 			isCustom = true;
 			filepath = state.settings.mindustryJars.customVersionNames[version];
-			if(!fs.existsSync(filepath)) fatal(`Invalid custom version ${version}: specified filepath ${path} does not exist.`);
+			if(!fs.existsSync(filepath)) fail(`Invalid custom version ${version}: specified filepath ${path} does not exist.`);
 			if(fs.lstatSync(filepath).isDirectory()){
 				try {
 					fs.accessSync(path.join(filepath, "/desktop/build.gradle"));
 				} catch(err){
-					fatal(`Invalid custom version ${version}: Unable to find a build.gradle in ${path}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+					fail(`Invalid custom version ${version}: Unable to find a build.gradle in ${path}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
 				}
 				isSourceDirectory = true;
 			}
@@ -238,7 +232,7 @@ export class Version {
 					versionNumber = potentialVersionNumber;
 				}
 			}
-			if(versionType == null || versionNumber == null) fatal(`Invalid version ${version}`);
+			if(versionType == null || versionNumber == null) fail(`Invalid version ${version}`);
 			if(versionNumber == "latest"){
 				info(`Getting latest ${versionType} version...`);
 				versionNumber = await this.getLatestVersion(versionType);
@@ -261,14 +255,14 @@ export class Version {
 	name(){
 		if(this.isSourceDirectory) return `[Source directory at ${this.path}]`;
 		if(this.isCustom) return `[custom version]`;
-		if(!this.versionNumber || !this.versionType) fatal("versionNumber should exist");
+		if(!this.versionNumber || !this.versionType) crash("versionNumber should exist");
 		return `${this.versionType}-${this.versionNumber}`;
 	}
 	async getDownloadUrl(){
-		if(this.versionType == null || this.versionNumber == null) throw new Error(`Logic error caused by ${this.versionType} at lookupDownloadUrl`);
+		if(this.versionType == null || this.versionNumber == null) crash(`Logic error caused by ${this.versionType} at lookupDownloadUrl`);
 		const versionData = versionUrls[this.versionType];
 		log(`Looking up download url for ${this.versionType} version ${this.versionNumber}`);
-		if(this.versionNumber == "latest") throw new Error("Logic error: version's number was 'latest'.");
+		if(this.versionNumber == "latest") crash("Logic error: version's number was 'latest'.");
 		return {
 			url: await resolveRedirect(versionData.url(this.versionNumber)),
 			jarName: `v${versionData.prefix}${this.versionNumber}.jar`
@@ -405,24 +399,23 @@ export function handleCommand(input:string, state:State){
 }
 
 function validateSettings(input:any, username:string | null):asserts input is Settings {
-	if(!(input instanceof Object)) throw new Error("settings is not an object");
-	const settings = input as Settings;
 	try {
+		const settings = input as Settings;
+		if(!(input instanceof Object)) fail("settings is not an object");
+
+		if(!fs.existsSync(settings.mindustryJars.folderPath))
+			fail(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist.`);
+		if(!fs.lstatSync(settings.mindustryJars.folderPath).isDirectory())
+			fail(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) is not a directory.`);
 		for(const [version, jarName] of Object.entries(settings.mindustryJars.customVersionNames)){
-			if(jarName.includes(" ")){
-				error(`Jar name for version ${version} contains a space.`);
-				error(`Run "mindustry config" to change settings.`);
-				process.exit(1);
-			}
+			if(jarName.includes(" ")) fail(`Jar name for version ${version} contains a space.`);
 		}
 
 		if(settings.logging.enabled){
-			if(!fs.existsSync(settings.logging.path)){
-				throw new Error(`Logging path "${settings.logging.path}" does not exist.`);
-			}
-			if(!fs.lstatSync(settings.logging.path).isDirectory()){
-				throw new Error(`Logging path "${settings.logging.path}" is not a directory.`);
-			}
+			if(!fs.existsSync(settings.logging.path))
+				fail(`Logging path (${settings.logging.path}) does not exist.`);
+			if(!fs.lstatSync(settings.logging.path).isDirectory())
+				fail(`Logging path (${settings.logging.path}) is not a directory.`);
 		}
 
 		if(username == null && settings.logging.removeUsername){
@@ -430,13 +423,13 @@ function validateSettings(input:any, username:string | null):asserts input is Se
 			settings.logging.removeUsername = false;
 		}
 
-		if(!(fs.existsSync(settings.mindustryJars.folderPath) && fs.lstatSync(settings.mindustryJars.folderPath).isDirectory())){
-			error(`Specified path to put Mindustry jars (${settings.mindustryJars.folderPath}) does not exist or is not a directory.\n`);
-			error(`Run "mindustry config" to change settings.`);
-			process.exit(1);
+	} catch(err){
+		if(err instanceof AppError){
+			fail(`Invalid settings: ${err.message}\nRun "mindustry config" to edit the settings file.`);
+		} else {
+			error("The following crash was possibly caused by an invalid settings file, try renaming it to automatically create a new one...");
+			throw err;
 		}
-	} catch(err:any){
-		throw new Error("Invalid settings: " + err.message);
 	}
 }
 
@@ -450,7 +443,7 @@ export function init(opts:Options, app:Application):State {
 	process.platform == "win32" ? path.join(process.env["APPDATA"]!, "Mindustry/") :
 		process.platform == "darwin" ? path.join(os.homedir(), "/Library/Application Support/Mindustry/") : 
 			process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), "/.local/share")) + "/Mindustry/") :
-				fatal(`Unsupported platform ${process.platform}`);
+				fail(`Unsupported platform ${process.platform}`);
 	const modsDirectory = path.join(mindustryDirectory, "mods");
 	const launcherDataPath = path.join(mindustryDirectory, "launcher");
 	const username = process.env["USERNAME"] ?? process.env["USER"] ?? null;

@@ -13,7 +13,7 @@ import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application } from "cli-app";
-import { LauncherError, askQuestion, askYesOrNo, error, fatal, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
+import { AppError, askQuestion, askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 
 
@@ -178,7 +178,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
 			const downloaded = await state.version.download(state);
 			if(!downloaded) return 1;
 			//Download was successful
-			if(!state.version.exists()) fatal(`Downloaded file doesn't exist! Attempted to download version ${opts.namedArgs.version} to ${state.version.jarFilePath()}`);
+			if(!state.version.exists()) crash(`Downloaded file doesn't exist! Attempted to download version ${opts.namedArgs.version} to ${state.version.jarFilePath()}`);
 		} else {
 			return 1;
 		}
@@ -188,7 +188,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
 		await copyMods(state);
 		launch(state);
 	} catch(err){
-		if(err instanceof LauncherError){
+		if(err instanceof AppError){
 			error(err.message);
 			return 1;
 		} else {

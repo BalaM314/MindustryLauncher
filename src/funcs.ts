@@ -30,13 +30,6 @@ export const ANSIEscape = {
 };
 const commandColor = ANSIEscape.reset;
 
-export class LauncherError extends Error {
-	constructor(message?:string){
-		super(message);
-		this.name = "LauncherError";
-	}
-}
-
 export function log(message:string){
 	console.log(`${ANSIEscape.blue}[Launcher]${ANSIEscape.reset} ${message}${commandColor}`);
 }
@@ -47,8 +40,16 @@ export function error(message:string){
 export function debug(message:string){
 	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
-export function fatal(message:string):never {
-	throw new LauncherError(message);
+
+
+export class AppError extends Error {
+	name = "AppError";
+}
+export function fail(message:string):never {
+	throw new AppError(message);
+}
+export function crash(message:string):never {
+	throw new AppError(message);
 }
 
 
