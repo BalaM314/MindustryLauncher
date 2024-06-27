@@ -3,7 +3,7 @@
 	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
 	"mindustryJars": {
 		//A folder containing the .jar files for each version.
-		"folderPath": "{{VERSIONSDIR}}",
+		"folderPath": {{VERSIONSDIR}},
 		"customVersionNames": {
 			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
 			//Format: "theVersionNameYouType": "theFileName.jar",
