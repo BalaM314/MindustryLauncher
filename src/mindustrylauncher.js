@@ -253,17 +253,17 @@ export class Version {
             log("Downloading...");
             console.log("");
             const downloadSpeed = new WindowedMean(25);
-            await downloadFile(url, filePath, (downloaded, total) => {
+            await downloadFile(url, filePath + ".tmp", (downloaded, total) => {
                 downloadSpeed.add(downloaded);
                 if (process.stdout.columns > 50) {
                     const barWidth = process.stdout.columns - 45;
                     const barProgress = Math.floor(downloaded / total * barWidth);
-                    process.stdout.write(`\x1B[1A`);
-                    process.stdout.write(" ".repeat(process.stdout.columns));
-                    process.stdout.write(`\x1B[1A`);
-                    console.log(`  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0))}/s)`);
+                    process.stdout.write(`\x1B[1A
+  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0))}/s)   `);
                 }
             });
+            process.stdout.write("\n");
+            await fsP.rename(filePath + ".tmp", filePath);
             log(`File downloaded to ${filePath}.`);
             return true;
         }
