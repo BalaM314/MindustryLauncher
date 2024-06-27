@@ -8,7 +8,7 @@
 			//List mapping your custom version names to paths. If the filename does not contain a / or \\, folderPath is prepended.
 			//Format: "theVersionNameYouType": "theFileName.jar",
 			//To launch theFileName.jar, you would choose version theVersionNameYouType.
-			// "wack": "C:\\someWeirdPath\\fileName.jar"
+			// "mycustomversion": "C:\\someWeirdPath\\fileName.jar"
 			//You can also point it to a Mindustry source directory, like this:
 			// "src": "C:\\Mindustry\\src\\Mindustry\\"
 			//and if you specify the --compile flag it'll compile for you.

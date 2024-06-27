@@ -456,11 +456,13 @@ export function init(opts:Options, app:Application):State {
 				recursive: true
 			});
 		}
-		const templateConfig = fs.readFileSync("template-config.json", "utf-8").replace("{{VERSIONSDIR}}", path.join(mindustryDirectory, "versions"));
+		const versionsPath = path.join(mindustryDirectory, "versions");
+		const templateConfig = fs.readFileSync("template-config.json", "utf-8").replace("{{VERSIONSDIR}}", versionsPath);
+		fs.mkdirSync(versionsPath, {recursive: true});
 		fs.writeFileSync(path.join(launcherDataPath, "config.json"), templateConfig);
 		if(opts.commandName != "config") log("Currently using default settings: run `mindustry config` to edit the settings file.");
 	}
-	
+
 	const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8")) as Settings;
 
 	if(opts.commandName != "config") validateSettings(settings, username);
