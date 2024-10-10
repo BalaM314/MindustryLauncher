@@ -1,0 +1,6 @@
+src/*.ts
+.eslintrc.json
+index.ts
+todo.md
+tsconfig.json
+
