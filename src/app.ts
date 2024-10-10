@@ -105,26 +105,28 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
 mindustrylauncher.command("config", "Opens the launcher's config.json file.", (opts, app) => {
 	const state = init(opts, app);
 	const settingsPath = path.join(state.launcherDataPath, "config.json");
-	try {
-		log(`Opening ${settingsPath}`);
-		throwIfError(spawnSync("code.cmd", [settingsPath]));
-		log(`Editor closed.`);
-	} catch(err){
-		if(!stringifyError(err).includes("ENOENT")) error(stringifyError(err));
+	log(`Opening ${settingsPath}`);
+	function openEditor(editor:string):boolean {
 		try {
-			throwIfError(spawnSync("notepad", [settingsPath]));
+			throwIfError(spawnSync(editor, [settingsPath], { stdio: "inherit" }));
 			log(`Editor closed.`);
+			return true;
 		} catch(err){
-			askQuestion("Please specify the editor to use:")
-				.then((editor) => {
-					throwIfError(spawnSync(editor, [settingsPath]));
-					log(`Editor closed.`);
-				})
-				.catch((err) => error("Could not open the file: " + err));
-			return -1;
+			if(!stringifyError(err).includes("ENOENT")) error(stringifyError(err));
+			return false;
 		}
 	}
-	return 0;
+	log(`Editor closed.`);
+	if(process.env["EDITOR"]) openEditor(process.env["EDITOR"]);
+	else {
+		//try some defaults
+		openEditor("nvim") ||
+		openEditor("code.cmd") ||
+		openEditor("notepad") ||
+		openEditor("nano") ||
+		openEditor("vim") ||
+		error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
+	}
 }, false, {}, ["c"]);
 
 mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {

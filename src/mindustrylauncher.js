@@ -147,25 +147,25 @@ export const versionUrls = {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/download/${version}/desktop.jar`,
         getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v7-builds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "foo-",
-        numberValidator: /^(\d+|latest)$/d,
+        numberValidator: /^(\d+|latest)$/,
     },
     "foo-v6": {
         url: version => `https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/download/${version}/desktop.jar`,
         getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v6-builds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "foo-v6-",
-        numberValidator: /^(\d+|latest)$/d,
+        numberValidator: /^(\d+|latest)$/,
     },
     be: {
         url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
         getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)(\d+)/],
         prefix: "be-",
-        numberValidator: /^(\d+|latest)$/d,
+        numberValidator: /^(\d+|latest)$/,
     },
     vanilla: {
         url: version => `https://github.com/Anuken/Mindustry/releases/download/v${version}/Mindustry.jar`,
         getLatestVersion: [`https://github.com/Anuken/Mindustry/releases/latest`, /(?<=\/tag\/v)(\d+(?:\.\d)?)/],
         prefix: "",
-        numberValidator: /^(\d+(?:\.\d+)?|latest)$/d,
+        numberValidator: /^(\d+(?:\.\d+)?|latest)$/,
     },
 };
 export class Version {
