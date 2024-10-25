@@ -182,13 +182,13 @@ export class Version {
             isCustom = true;
             filepath = state.settings.mindustryJars.customVersionNames[version];
             if (!fs.existsSync(filepath))
-                fail(`Invalid custom version ${version}: specified filepath ${path} does not exist.`);
+                fail(`Invalid custom version ${version}: specified filepath ${filepath} does not exist.`);
             if (fs.lstatSync(filepath).isDirectory()) {
                 try {
                     fs.accessSync(path.join(filepath, "/desktop/build.gradle"));
                 }
                 catch (err) {
-                    fail(`Invalid custom version ${version}: Unable to find a build.gradle in ${path}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
+                    fail(`Invalid custom version ${version}: Unable to find a build.gradle in ${filepath}/desktop/build.gradle. Are you sure this is a Mindustry source directory?`);
                 }
                 isSourceDirectory = true;
             }
@@ -298,7 +298,7 @@ export async function compileDirectory(path) {
     [gradleProcess.stdout, gradleProcess.stderr].forEach(stream => stream
         .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
         .pipe(process.stdout));
-    //Fancy promise stuff, wait until gradle exits
+    //wait until gradle exits
     const code = await new Promise(res => gradleProcess.on("exit", res));
     if (code == 0) {
         log("Compiled succesfully.");
