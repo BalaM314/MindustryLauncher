@@ -313,7 +313,8 @@ export async function compileDirectory(path:string):Promise<boolean> {
 		return false;
 	}
 	log("Compiling...");
-	const gradleProcess = spawn(`${path}/gradlew.bat`, ["desktop:dist"], {
+	const gradlePath = os.platform() == "win32" ? `${path}/gradlew.bat` : `${path}/gradlew`;
+	const gradleProcess = spawn(gradlePath, ["desktop:dist"], {
 		cwd: path,
 		shell: true
 	});
@@ -342,7 +343,7 @@ export function launch(state:State){
 	state.mindustryProcess = startProcess(state);
 
 	//Apply command handler
-	process.stdin.on("data", data => handleCommand(data.toString().slice(0, -2), state));
+	process.stdin.on("data", data => handleCommand(data.toString().replace(/\r?\n$/, ""), state));
 
 	//Apply more handlers
 	if(state.settings.restartAutomaticallyOnModUpdate){
