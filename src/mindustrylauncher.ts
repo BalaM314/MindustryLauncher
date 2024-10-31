@@ -369,7 +369,7 @@ export function launch(state:State){
 }
 
 export function handleCommand(input:string, state:State){
-	switch(input.split(" ")[0]){
+	switch(input.split(" ")[0].toLowerCase()){
 		case "rs": case "restart":
 			restart(state, false, false);
 			break;
@@ -380,9 +380,9 @@ export function handleCommand(input:string, state:State){
 			restart(state, false, true);
 			break;
 		case "?": case "h": case "help":
-			log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help/h/?', 'exit/e'`);
+			log(`Commands: 'restart/rs', 'rebuild/rb', 'recompile/rc', 'help/h/?', 'exit/e/quit/q'`);
 			break;
-		case "exit": case "e":
+		case "exit": case "e": case "q": case "quit":
 			log("Exiting...");
 			state.mindustryProcess?.removeAllListeners();
 			state.mindustryProcess?.kill("SIGTERM");
