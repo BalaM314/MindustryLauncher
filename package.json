@@ -1,37 +1,37 @@
 {
-  "name": "mindustrylauncher",
-  "version": "1.4.2",
-  "description": "A custom Mindustry launcher, with useful features like auto-restart and better logging.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-		"start": "tsc -w"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/BalaM314/MindustryLauncher.git"
-  },
-  "keywords": [
-    "mindustry"
-  ],
-  "bin": {
-    "mindustry": "index.js"
-  },
-  "author": "BalaM314",
-  "license": "GPL-3.0-or-later",
-  "bugs": {
-    "url": "https://github.com/BalaM314/MindustryLauncher/issues"
-  },
-  "homepage": "https://github.com/BalaM314/MindustryLauncher#readme",
-  "type": "module",
-  "devDependencies": {
-    "@types/node": "^17.0.23",
-    "@typescript-eslint/eslint-plugin": "^5.40.1",
-    "@typescript-eslint/parser": "^5.40.1",
-    "eslint": "^8.26.0",
-    "typescript-eslint": "^0.0.1-alpha.0"
-  },
-  "dependencies": {
-    "cli-app": "github:BalaM314/cli-app"
-  }
+	"name": "mindustrylauncher",
+	"version": "1.4.3",
+	"description": "A custom Mindustry launcher, with useful features like auto-restart and better logging.",
+	"main": "build/index.js",
+	"scripts": {
+		"watch": "tsc -w"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/BalaM314/MindustryLauncher.git"
+	},
+	"keywords": [
+		"mindustry"
+	],
+	"bin": {
+		"mindustry": "build/cli.js"
+	},
+	"author": "BalaM314",
+	"license": "GPL-3.0-or-later",
+	"bugs": {
+		"url": "https://github.com/BalaM314/MindustryLauncher/issues"
+	},
+	"homepage": "https://github.com/BalaM314/MindustryLauncher#readme",
+	"type": "module",
+	"devDependencies": {
+		"@types/node": "^20",
+		"eslint": "^9",
+		"typescript-eslint": "^8"
+	},
+	"dependencies": {
+		"cli-app": "github:BalaM314/cli-app"
+	},
+	"engines": {
+		"node": ">=20"
+	}
 }

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
@@ -8,8 +7,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 Runs the program.
 */
-
-import { mindustrylauncher } from "./src/app.js";
-
-
-mindustrylauncher.run(process.argv);
+export * from "./app.js";
+export * from "./funcs.js";
+export * from "./mindustrylauncher.js";
+export * from "./types.js";
