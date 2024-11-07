@@ -1,4 +1,4 @@
-/**
+/* @license
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
 MindustryLauncher is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -23,10 +23,10 @@ mindustrylauncher.command("version", "Displays the version of MindustryLauncher.
 	const packagePath = path.join(app.sourceDirectory, "package.json");
 	try {
 		const fileData = fs.readFileSync(packagePath, "utf-8");
-		const packageData = JSON.parse(fileData);
+		const packageData = JSON.parse(fileData) as { version: string };
 		log(`MindustryLauncher version ${packageData["version"]}`);
-	} catch(err:any){
-		if(err?.code == "ENOENT"){
+	} catch(err){
+		if(err && (err as NodeJS.ErrnoException).code == "ENOENT"){
 			error("Package.json file does not exist! This is likely caused by an improper or corrupt installation.");
 		} else if(err instanceof SyntaxError){
 			error("Package.json file is invalid! This is likely caused by an improper or corrupt installation.");
@@ -77,7 +77,7 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
 		if(modfile){
 			const modfilePath = path.join(state.modsDirectory, modfile);
 			if((await fsP.stat(modfilePath)).isFile()){
-				fsP.rename(modfilePath, modfilePath + ".disabled");
+				await fsP.rename(modfilePath, modfilePath + ".disabled");
 				log(`Disabled mod ${modfile}`);
 			} else {
 				error(`Cannot disable a directory mod.`);
@@ -120,11 +120,10 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
 	if(process.env["EDITOR"]) openEditor(process.env["EDITOR"]);
 	else {
 		//try some defaults
-		openEditor("nvim") ||
-		openEditor("code.cmd") ||
-		openEditor("notepad") ||
-		openEditor("nano") ||
-		openEditor("vim") ||
+		const defaults = ["nvim", "code", "code.cmd", "notepad", "nano", "vim"];
+		for(const cmd of defaults){
+			if(openEditor(cmd)) return 0;
+		}
 		error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
 	}
 }, false, {}, ["c"]);

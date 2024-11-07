@@ -1,4 +1,4 @@
-/**
+/* @license
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
 MindustryLauncher is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -13,7 +13,7 @@ import * as https from "https";
 import * as path from "path";
 import * as readline from "readline";
 import { SpawnSyncReturns } from "child_process";
-import { Stream, TransformCallback, TransformOptions } from "stream";
+import { Stream, Transform, TransformCallback, TransformOptions } from "stream";
 
 export const ANSIEscape = {
 	"red": `\u001b[0;31m`,
@@ -36,7 +36,6 @@ export function log(message:string){
 export function error(message:string){
 	console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}${commandColor}`);
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function debug(message:string){
 	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
@@ -79,14 +78,17 @@ export function formatLine(line:string){
 	return `${getTimeComponent(true)} ${getLogHighlight(line[1])}${line}${commandColor}`;
 }
 
-/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
+/**Creates a subclass of Transform from a function that processes one line at a time. */
 export function streamTransform(transformFunction: (text:string, chunkIndex:number) => string){
 	return streamTransformState<never>((text, chunkIndex) => [transformFunction(text, chunkIndex), null!]);
 }
 
-/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
-export function streamTransformState<T>(transformFunction: (text:string, chunkIndex:number, state:T | null) => [output:string, state:T], def:T | null = null){
-	return class extends Stream.Transform {
+/**Creates a subclass of Transform from a function that processes one line at a time. */
+export function streamTransformState<T>(
+	transformFunction: (text:string, chunkIndex:number, state:T | null) => [output:string, state:T],
+	def:T | null = null
+):new (opts?:TransformOptions) => Transform {
+	return class extends Transform {
 		private _line: string;
 		private state: T | null;
 		constructor(opts?:TransformOptions){
@@ -94,7 +96,7 @@ export function streamTransformState<T>(transformFunction: (text:string, chunkIn
 			this._line = "";
 			this.state = def;
 		}
-		_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+		override _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
 			this._line += chunk.toString();
 			const lines = this._line.split(/\r?\n/);
 			callback(
@@ -128,11 +130,11 @@ export function prependTextTransform(text: string | (() => string)){
 }
 
 /**Removes a word from logs. Useful to hide your Windows username.*/
-export class CensorKeywordTransform extends Stream.Transform {
+export class CensorKeywordTransform extends Transform {
 	constructor(public keyword:string | RegExp, public replace:string, opts?:TransformOptions){
 		super(opts);
 	}
-	_transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback):void {
+	override _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback):void {
 		callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
 	}
 }
@@ -148,7 +150,7 @@ export class WindowedMean {
 	lastTime = -1;
 	
 	constructor(public maxWindowSize:number){
-		this.data = new Array(maxWindowSize).fill([0, 0]);
+		this.data = Array.from({length: maxWindowSize}, () => [0, 0]);
 	}
 
 	add(value:number){
@@ -159,8 +161,8 @@ export class WindowedMean {
 	}
 	mean(windowSize?:number):number | null;
 	mean<T>(windowSize:number, notEnoughDataValue:T):number | T;
-	mean<T>(windowSize = this.maxWindowSize, notEnoughDataValue?:T):number | T {
-		if(this.queuei < windowSize) return (notEnoughDataValue ?? null) as any; //overload 1
+	mean<T>(windowSize = this.maxWindowSize, notEnoughDataValue?:T):number | T | null {
+		if(this.queuei < windowSize) return notEnoughDataValue ?? null; //overload 1
 		if(windowSize > this.maxWindowSize) throw new Error(`Cannot get average over the last ${windowSize} values becaue only ${this.maxWindowSize} values are stored`);
 		let total = 0;
 		const wrappedQueueI = this.queuei % this.maxWindowSize;
@@ -198,11 +200,15 @@ export function copyDirectory(source:string, destination:string, exclude:string 
 		const sourcePath = path.join(source, entry.name);
 		const destinationPath = path.join(destination, entry.name);
 
-		entry.isDirectory() ? copyDirectory(sourcePath, destinationPath, exclude) : fs.copyFileSync(sourcePath, destinationPath);
+		if(entry.isDirectory()){
+			copyDirectory(sourcePath, destinationPath, exclude);
+		} else {
+			fs.copyFileSync(sourcePath, destinationPath);
+		}
 	});
 }
 
-export function parseJSONC(data:string) {
+export function parseJSONC(data:string):unknown {
 	return JSON.parse(data.split("\n")
 		.filter(line => !/^[ \t]*\/\//.test(line))
 		//Removes lines that start with any amount of whitespaces or tabs and two forward slashes(comments).
