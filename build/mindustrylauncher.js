@@ -1,4 +1,4 @@
-/**
+/* @license
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
 MindustryLauncher is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -80,7 +80,7 @@ async function restart(state, build, compile) {
             error("Cannot compile, launched version did not come from a source directory.");
         }
     }
-    copyMods(state);
+    await copyMods(state);
     state.mindustryProcess = startProcess(state);
     log("Started new process.");
 }
@@ -128,11 +128,9 @@ export async function copyMods(state) {
         }
         else if (mod.type == "file") {
             //Copy the mod file
-            let modname = path.basename(mod.path).split(".").slice(0, -1).join(".");
-            if (modname == "")
-                modname = path.basename(mod.path);
-            log(`Copying modfile "${mod.path}"`);
-            fs.copyFileSync(mod.path, path.join(state.modsDirectory, modname[0] + path.extname(mod.path)));
+            const modname = path.basename(mod.path);
+            log(`Copying mod file "${mod.path}"`);
+            fs.copyFileSync(mod.path, path.join(state.modsDirectory, modname));
         }
     });
     if (state.settings.buildModsConcurrently)
@@ -313,7 +311,7 @@ export async function compileDirectory(path) {
 export function launch(state) {
     log(`Launching Mindustry version ${state.namedArgs["version"]}`);
     if (state.mindustryArgs.length > 0) {
-        log(`Arguments: ${state.mindustryArgs}`);
+        log(`Arguments for Mindustry: ${state.mindustryArgs.join(", ")}`);
     }
     state.mindustryProcess = startProcess(state);
     //Apply command handler

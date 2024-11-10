@@ -1,4 +1,4 @@
-/**
+/* @license
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
 MindustryLauncher is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -11,7 +11,7 @@ import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
 import * as readline from "readline";
-import { Stream } from "stream";
+import { Transform } from "stream";
 export const ANSIEscape = {
     "red": `\u001b[0;31m`,
     "yellow": `\u001b[0;93m`,
@@ -32,7 +32,6 @@ export function log(message) {
 export function error(message) {
     console.error(`${ANSIEscape.blue}[Launcher]${ANSIEscape.red} ${message}${commandColor}`);
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
@@ -72,13 +71,13 @@ export function getTimeComponent(color) {
 export function formatLine(line) {
     return `${getTimeComponent(true)} ${getLogHighlight(line[1])}${line}${commandColor}`;
 }
-/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
+/**Creates a subclass of Transform from a function that processes one line at a time. */
 export function streamTransform(transformFunction) {
     return streamTransformState((text, chunkIndex) => [transformFunction(text, chunkIndex), null]);
 }
-/**Creates a subclass of Stream.Transform from a function that processes one line at a time. */
+/**Creates a subclass of Transform from a function that processes one line at a time. */
 export function streamTransformState(transformFunction, def = null) {
-    return class extends Stream.Transform {
+    return class extends Transform {
         constructor(opts) {
             super(opts);
             this._line = "";
@@ -111,7 +110,7 @@ export function prependTextTransform(text) {
     return streamTransform((line) => `${text instanceof Function ? text() : text} ${line}`);
 }
 /**Removes a word from logs. Useful to hide your Windows username.*/
-export class CensorKeywordTransform extends Stream.Transform {
+export class CensorKeywordTransform extends Transform {
     constructor(keyword, replace, opts) {
         super(opts);
         this.keyword = keyword;
@@ -130,7 +129,7 @@ export class WindowedMean {
         /** Index of the next place to insert an item into the queue. */
         this.queuei = 0;
         this.lastTime = -1;
-        this.data = new Array(maxWindowSize).fill([0, 0]);
+        this.data = Array.from({ length: maxWindowSize }, () => [0, 0]);
     }
     add(value) {
         if (this.lastTime != -1) {
@@ -140,7 +139,7 @@ export class WindowedMean {
     }
     mean(windowSize = this.maxWindowSize, notEnoughDataValue) {
         if (this.queuei < windowSize)
-            return (notEnoughDataValue ?? null); //overload 1
+            return notEnoughDataValue ?? null; //overload 1
         if (windowSize > this.maxWindowSize)
             throw new Error(`Cannot get average over the last ${windowSize} values becaue only ${this.maxWindowSize} values are stored`);
         let total = 0;
@@ -176,7 +175,12 @@ export function copyDirectory(source, destination, exclude = "") {
     fs.readdirSync(source, { withFileTypes: true }).forEach(entry => {
         const sourcePath = path.join(source, entry.name);
         const destinationPath = path.join(destination, entry.name);
-        entry.isDirectory() ? copyDirectory(sourcePath, destinationPath, exclude) : fs.copyFileSync(sourcePath, destinationPath);
+        if (entry.isDirectory()) {
+            copyDirectory(sourcePath, destinationPath, exclude);
+        }
+        else {
+            fs.copyFileSync(sourcePath, destinationPath);
+        }
     });
 }
 export function parseJSONC(data) {

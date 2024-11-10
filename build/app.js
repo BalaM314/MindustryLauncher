@@ -1,4 +1,4 @@
-/**
+/* @license
 Copyright © <BalaM314>, 2024.
 This file is part of MindustryLauncher.
 MindustryLauncher is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -23,7 +23,7 @@ mindustrylauncher.command("version", "Displays the version of MindustryLauncher.
         log(`MindustryLauncher version ${packageData["version"]}`);
     }
     catch (err) {
-        if (err?.code == "ENOENT") {
+        if (err && err.code == "ENOENT") {
             error("Package.json file does not exist! This is likely caused by an improper or corrupt installation.");
         }
         else if (err instanceof SyntaxError) {
@@ -71,7 +71,7 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
         if (modfile) {
             const modfilePath = path.join(state.modsDirectory, modfile);
             if ((await fsP.stat(modfilePath)).isFile()) {
-                fsP.rename(modfilePath, modfilePath + ".disabled");
+                await fsP.rename(modfilePath, modfilePath + ".disabled");
                 log(`Disabled mod ${modfile}`);
             }
             else {
@@ -118,12 +118,12 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
         openEditor(process.env["EDITOR"]);
     else {
         //try some defaults
-        openEditor("nvim") ||
-            openEditor("code.cmd") ||
-            openEditor("notepad") ||
-            openEditor("nano") ||
-            openEditor("vim") ||
-            error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
+        const defaults = ["nvim", "code", "code.cmd", "notepad", "nano", "vim"];
+        for (const cmd of defaults) {
+            if (openEditor(cmd))
+                return 0;
+        }
+        error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
     }
 }, false, {}, ["c"]);
 mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {
