@@ -46,9 +46,7 @@ export interface State {
 	/**The current user's username, used to censor it in log output. */
 	username: string | null;
 	/**The named arguments passed to the program. */
-	namedArgs: {
-		[index: string]: string | undefined | null;
-	};
+	versionName: string;
 	mindustryProcess: ChildProcess | null;
 	currentLogStream: fs.WriteStream | null;
 	mindustryArgs: string[];
@@ -60,3 +58,13 @@ export interface State {
 	}[];
 	buildMods: boolean;
 }
+
+export type LaunchOptions = {
+	commandName: string;
+	namedArgs: {
+		version?: string;
+		buildMods?: boolean;
+		info?: boolean;
+	};
+	positionalArgs: (string | undefined)[];
+};

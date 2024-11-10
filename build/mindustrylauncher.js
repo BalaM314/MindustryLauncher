@@ -309,7 +309,7 @@ export async function compileDirectory(path) {
     }
 }
 export function launch(state) {
-    log(`Launching Mindustry version ${state.namedArgs["version"]}`);
+    log(`Launching Mindustry version ${state.versionName}`);
     if (state.mindustryArgs.length > 0) {
         log(`Arguments for Mindustry: ${state.mindustryArgs.join(", ")}`);
     }
@@ -463,11 +463,11 @@ export function init(opts, app) {
         mindustryProcess: null,
         modsDirectory,
         username,
-        namedArgs: opts.namedArgs,
+        versionName: opts.namedArgs.version ?? null, //TODO fix this mess
         mindustryArgs: settings.processArgs,
         jvmArgs: settings.jvmArgs.concat(jvmArgs),
         externalMods,
-        buildMods: "buildMods" in opts.namedArgs,
+        buildMods: opts.namedArgs.buildMods ?? false,
         version: null //TODO this is probably bad
     };
 }

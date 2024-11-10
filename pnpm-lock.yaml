@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      cli-app:
-        specifier: github:BalaM314/cli-app
-        version: https://codeload.github.com/BalaM314/cli-app/tar.gz/5334837f8cd897526ed42b75514ab73475ba2b17
+      '@balam314/cli-app':
+        specifier: ^3.0.2
+        version: 3.0.2
     devDependencies:
       '@types/node':
         specifier: ^20
@@ -23,6 +23,9 @@ importers:
         version: 8.13.0(eslint@9.14.0)(typescript@5.0.4)
 
 packages:
+
+  '@balam314/cli-app@3.0.2':
+    resolution: {integrity: sha512-OY/XxOOXV9d3UyfsV+LObSMcu7a/uzdloZCNP/EEy80nikMg45kZ9/FzIRLdflOU7XX7ErOG5gqnLonilYV72Q==}
 
   '@eslint-community/eslint-utils@4.4.1':
     resolution: {integrity: sha512-s3O3waFUrMV8P/XaF/+ZTp1X9XBZW1a4B97ZnjQF2KYWaFD2A8KyFBsrsfSjEmjn3RGWAIuvlneuZm3CUK3jbA==}
@@ -196,10 +199,6 @@ packages:
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
-
-  cli-app@https://codeload.github.com/BalaM314/cli-app/tar.gz/5334837f8cd897526ed42b75514ab73475ba2b17:
-    resolution: {tarball: https://codeload.github.com/BalaM314/cli-app/tar.gz/5334837f8cd897526ed42b75514ab73475ba2b17}
-    version: 2.2.0
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -529,6 +528,8 @@ packages:
 
 snapshots:
 
+  '@balam314/cli-app@3.0.2': {}
+
   '@eslint-community/eslint-utils@4.4.1(eslint@9.14.0)':
     dependencies:
       eslint: 9.14.0
@@ -722,8 +723,6 @@ snapshots:
     dependencies:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
-
-  cli-app@https://codeload.github.com/BalaM314/cli-app/tar.gz/5334837f8cd897526ed42b75514ab73475ba2b17: {}
 
   color-convert@2.0.1:
     dependencies:

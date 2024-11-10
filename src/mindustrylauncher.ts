@@ -16,9 +16,9 @@ import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as os from "os";
 import * as path from "path";
-import { Application, Options } from "cli-app";
+import type { Application } from "@balam314/cli-app";
 import { ANSIEscape, CensorKeywordTransform, AppError, LoggerHighlightTransform, WindowedMean, copyDirectory, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError, crash } from "./funcs.js";
-import { Settings, State } from "./types.js";
+import { LaunchOptions, Settings, State } from "./types.js";
 
 
 
@@ -334,7 +334,7 @@ export async function compileDirectory(path:string):Promise<boolean> {
 
 export function launch(state:State){
 	
-	log(`Launching Mindustry version ${state.namedArgs["version"]}`);
+	log(`Launching Mindustry version ${state.versionName}`);
 	if(state.mindustryArgs.length > 0){
 		log(`Arguments for Mindustry: ${state.mindustryArgs.join(", ")}`);
 	}
@@ -436,7 +436,7 @@ function validateSettings(input:unknown, username:string | null):asserts input i
 }
 
 /**Returns a State given process args. */
-export function init(opts:Options, app:Application):State {
+export function init(opts:LaunchOptions, app:Application):State {
 	//Change working directory to the same as this program's index.js file
 	process.chdir(app.sourceDirectory);
 
@@ -478,7 +478,7 @@ export function init(opts:Options, app:Application):State {
 			: (error(`External mod "${modPath}" does not exist.`), "invalid") as "java" | "dir" | "file" | "invalid"
 	}));
 	const jvmArgs = opts.positionalArgs.includes("--")
-		? opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1)
+		? opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1) as string[]
 		: [];
 
 	return {
@@ -489,11 +489,11 @@ export function init(opts:Options, app:Application):State {
 		mindustryProcess: null,
 		modsDirectory,
 		username,
-		namedArgs: opts.namedArgs,
+		versionName: opts.namedArgs.version ?? null!, //TODO fix this mess
 		mindustryArgs: settings.processArgs,
 		jvmArgs: settings.jvmArgs.concat(jvmArgs),
 		externalMods,
-		buildMods: "buildMods" in opts.namedArgs,
+		buildMods: opts.namedArgs.buildMods ?? false,
 		version: null!//TODO this is probably bad
 	};
 }

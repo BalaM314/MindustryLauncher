@@ -1,5 +1,5 @@
-import { Application, Options } from "cli-app";
-import { State } from "./types.js";
+import type { Application } from "@balam314/cli-app";
+import { LaunchOptions, State } from "./types.js";
 export declare function copyMods(state: State): Promise<void>;
 export declare const versionUrls: {
     [type: string]: {
@@ -35,4 +35,4 @@ export declare function compileDirectory(path: string): Promise<boolean>;
 export declare function launch(state: State): void;
 export declare function handleCommand(input: string, state: State): void;
 /**Returns a State given process args. */
-export declare function init(opts: Options, app: Application): State;
+export declare function init(opts: LaunchOptions, app: Application): State;

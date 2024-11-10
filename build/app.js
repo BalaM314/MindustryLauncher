@@ -11,11 +11,11 @@ import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
-import { Application } from "cli-app";
+import { Application, arg } from "@balam314/cli-app";
 import { AppError, askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 export const mindustrylauncher = new Application("mindustrylauncher", "A launcher for Mindustry built with Node and TS.");
-mindustrylauncher.command("version", "Displays the version of MindustryLauncher.", (opts, app) => {
+mindustrylauncher.command("version", "Displays the version of MindustryLauncher.").aliases("v").args({}).impl((opts, app) => {
     const packagePath = path.join(app.sourceDirectory, "package.json");
     try {
         const fileData = fs.readFileSync(packagePath, "utf-8");
@@ -31,10 +31,15 @@ mindustrylauncher.command("version", "Displays the version of MindustryLauncher.
         }
         return 1;
     }
-}, false, {}, ["v"]);
-mindustrylauncher.command("versions", "Opens the versions folder.", async (opts, app) => {
+});
+mindustrylauncher.command("versions", "Opens the versions folder.").aliases("vs").args({
+    namedArgs: {
+        info: arg().aliases("i").valueless()
+            .description("Shows information about your versions instead of opening the versions folder."),
+    }
+}).impl(async (opts, app) => {
     const state = init(opts, app);
-    if ("info" in opts.namedArgs) {
+    if (opts.namedArgs.info) {
         const jarFiles = (await fsP.readdir(state.settings.mindustryJars.folderPath))
             .filter(filename => filename.startsWith("v") && path.extname(filename) == ".jar");
         //Only show mindustry version jar files
@@ -47,25 +52,24 @@ You have ${jarFiles.length} version files, taking up a total file size of ${form
         log(`Opening versions folder: ${state.settings.mindustryJars.folderPath}\nUse --info to get information about installed versions.`);
         spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.mindustryJars.folderPath]);
     }
-}, false, {
+});
+mindustrylauncher.command("mods", "Opens the mods folder.").aliases("m").args({
     namedArgs: {
-        info: {
-            needsValue: false,
-            description: "Shows information about your versions instead of opening the versions folder.",
-            aliases: ["i"]
-        }
+        info: arg().valueless().aliases("i")
+            .description("Shows information about your mods instead of opening the mods folder."),
+        disable: arg().aliases("d").optional()
+            .description("Force disable a mod by putting .disabled in the file extension."),
     }
-}, ["vs"]);
-mindustrylauncher.command("mods", "Opens the mods folder.", async (opts, app) => {
+}).impl(async (opts, app) => {
     const state = init(opts, app);
-    if ("info" in opts.namedArgs) {
+    if (opts.namedArgs.info) {
         const modData = await fsP.readdir(state.modsDirectory);
         const fileData = await Promise.all(modData.map(file => fsP.stat(path.join(state.modsDirectory, file))));
         log(`List of installed mods:
 ${modData.join(", ")}
 You have ${modData.length} mod files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
     }
-    else if ("disable" in opts.namedArgs) {
+    else if (opts.namedArgs.disable) {
         const modData = await fsP.readdir(state.modsDirectory);
         const modfile = modData.find(f => f.toLowerCase().includes(opts.namedArgs["disable"]));
         if (modfile) {
@@ -83,21 +87,8 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
         log(`Opening mods folder: ${state.modsDirectory}\nUse --info to get information about installed mods.`);
         spawnSync(process.platform == "win32" ? "explorer" : "open", [state.modsDirectory]);
     }
-}, false, {
-    namedArgs: {
-        info: {
-            needsValue: false,
-            description: "Shows information about your mods instead of opening the mods folder.",
-            aliases: ["i"]
-        },
-        disable: {
-            description: "Force disable a mod by putting .disabled in the file extension.",
-            aliases: ["d"],
-            required: false
-        }
-    }
-}, ["m"]);
-mindustrylauncher.command("config", "Opens the launcher's config.json file.", (opts, app) => {
+});
+mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({}).impl((opts, app) => {
     const state = init(opts, app);
     const settingsPath = path.join(state.launcherDataPath, "config.json");
     log(`Opening ${settingsPath}`);
@@ -124,11 +115,17 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.", (o
                 return 0;
         }
         error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
+        return 1;
     }
-}, false, {}, ["c"]);
-mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => {
+});
+mindustrylauncher.command("logs", "Opens the logs folder").aliases("l").args({
+    namedArgs: {
+        info: arg().valueless().aliases("i")
+            .description("Shows information about your logs instead of the logs folder."),
+    }
+}).impl(async (opts, app) => {
     const state = init(opts, app);
-    if ("info" in opts.namedArgs) {
+    if (opts.namedArgs.info) {
         const files = (await fsP.readdir(state.settings.logging.path))
             .map(filename => path.join(state.settings.logging.path, filename));
         const fileData = await Promise.all(files.map(file => fsP.stat(file)));
@@ -137,26 +134,27 @@ mindustrylauncher.command("logs", "Opens the logs folder", async (opts, app) => 
     else {
         spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.logging.path]);
     }
-}, false, {
+});
+mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
     namedArgs: {
-        info: {
-            needsValue: false,
-            description: "Shows information about your logs instead of the logs folder.",
-            aliases: ["i"]
-        }
-    }
-}, ["l"]);
-mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => {
+        version: arg().aliases("v").default("latest")
+            .description("The version to launch, like 141.3, be-22456, foo-latest, foo-v6-1000, etc"),
+        compile: arg().valueless().aliases("c")
+            .description("Whether or not to compile a version before launching, if it points to a Mindustry source directory."),
+        buildMods: arg().valueless().aliases("b")
+            .description("Whether or not to compile Java mod directories before copying.")
+    },
+}).impl(async (opts, app) => {
     const state = init(opts, app);
     state.version = await Version.fromInput(opts.namedArgs.version, state);
     if (state.version.isSourceDirectory) {
-        if ("compile" in opts.namedArgs) {
+        if (opts.namedArgs.compile) {
             const output = await compileDirectory(state.version.path);
             if (!output)
                 return 1;
         }
         if (!state.version.exists()) {
-            if ("compile" in opts.namedArgs)
+            if (opts.namedArgs.compile)
                 error(`Unable to find a Mindustry.jar in ${state.version.jarFilePath()}. Are you sure this is a Mindustry source directory?`);
             else
                 error(`Unable to find a Mindustry.jar in ${state.version.jarFilePath()}. Are you sure this is a Mindustry source directory? You may need to compile first.`);
@@ -195,25 +193,4 @@ mindustrylauncher.command("launch", "Launches Mindustry.", async (opts, app) => 
         }
     }
     //copy mods and launch
-}, true, {
-    namedArgs: {
-        version: {
-            description: "The version to launch, like 141.3, be-22456, foo-latest, foo-v6-1000, etc",
-            required: true,
-        },
-        compile: {
-            description: "Whether or not to compile a version before launching, if it points to a Mindustry source directory.",
-            needsValue: false
-        },
-        buildMods: {
-            description: "Whether or not to compile Java mod directories before copying.",
-            needsValue: false
-        }
-    },
-    positionalArgs: [],
-    aliases: {
-        c: "compile",
-        v: "version",
-        b: "buildMods",
-    }
 });

@@ -1,2 +1,2 @@
-import { Application } from "cli-app";
+import { Application } from "@balam314/cli-app";
 export declare const mindustrylauncher: Application;
