@@ -22,7 +22,7 @@ export declare class AppError extends Error {
 export declare function fail(message: string): never;
 export declare function crash(message: string): never;
 /**Returns the proper highlight color for a line based on the character inside [x] */
-export declare function getLogHighlight(char: string): string;
+export declare function getLogHighlight(char: string | undefined): string;
 export declare function getTimeComponent(color: boolean): string;
 export declare function formatLine(line: string): string;
 /**Creates a subclass of Transform from a function that processes one line at a time. */
@@ -44,7 +44,7 @@ export declare class CensorKeywordTransform extends Transform {
 export declare class WindowedMean {
     maxWindowSize: number;
     /** Queue to hold the data. */
-    data: [number, number][];
+    data: Array<[number, number]>;
     /** Index of the next place to insert an item into the queue. */
     queuei: number;
     lastTime: number;

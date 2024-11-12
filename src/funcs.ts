@@ -54,7 +54,7 @@ export function crash(message:string):never {
 
 
 /**Returns the proper highlight color for a line based on the character inside [x] */
-export function getLogHighlight(char:string){
+export function getLogHighlight(char:string | undefined){
 	switch(char){
 		case "I":
 			return ANSIEscape.white;
@@ -144,9 +144,9 @@ export class CensorKeywordTransform extends Transform {
  */
 export class WindowedMean {
 	/** Queue to hold the data. */
-	data:[number, number][];
+	data:Array<[number, number]>;
 	/** Index of the next place to insert an item into the queue. */
-	queuei:number = 0;
+	queuei = 0;
 	lastTime = -1;
 	
 	constructor(public maxWindowSize:number){
@@ -167,8 +167,8 @@ export class WindowedMean {
 		let total = 0;
 		const wrappedQueueI = this.queuei % this.maxWindowSize;
 		for(let i = wrappedQueueI - windowSize; i < wrappedQueueI; i ++){
-			if(i >= 0) total += this.data[i][0] / this.data[i][1];
-			else total += this.data[this.maxWindowSize + i][0] / this.data[this.maxWindowSize + i][1];
+			if(i >= 0) total += this.data[i]![0] / this.data[i]![1];
+			else total += this.data[this.maxWindowSize + i]![0] / this.data[this.maxWindowSize + i]![1];
 		}
 		return total / windowSize;
 	}
@@ -193,7 +193,7 @@ export async function askYesOrNo(query:string):Promise<boolean> {
 }
 
 /**Copies a directory recursively. */
-export function copyDirectory(source:string, destination:string, exclude:string = ""){
+export function copyDirectory(source:string, destination:string, exclude = ""){
 	if(path.basename(source) == exclude) return;
 	fs.mkdirSync(destination, {recursive: true});
 	fs.readdirSync(source, {withFileTypes: true}).forEach(entry => {

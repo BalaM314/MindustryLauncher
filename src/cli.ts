@@ -12,4 +12,4 @@ Runs the program.
 import { mindustrylauncher } from "./app.js";
 
 
-mindustrylauncher.run(process.argv);
+void mindustrylauncher.run(process.argv);

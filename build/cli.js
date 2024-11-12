@@ -9,4 +9,4 @@ You should have received a copy of the GNU Lesser General Public License along w
 Runs the program.
 */
 import { mindustrylauncher } from "./app.js";
-mindustrylauncher.run(process.argv);
+void mindustrylauncher.run(process.argv);

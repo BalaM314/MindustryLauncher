@@ -2,12 +2,18 @@
   "compilerOptions": {
     "target": "es2021",
     "lib": ["ES2022"],
-    "strict": true,
+    //general
+    "esModuleInterop": true,
     "moduleResolution": "node",
-		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
+    //project config
+		"skipLibCheck": true,
 		"declaration": true,
 		"rootDir": "./src",
 		"outDir": "./build/",
+    //type strictness
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
   }
 }

@@ -13,18 +13,18 @@ import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application, arg } from "@balam314/cli-app";
-import { AppError, askQuestion, askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
+import { AppError, askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 
 
-export const mindustrylauncher = new Application("mindustrylauncher", "A launcher for Mindustry built with Node and TS.");
+export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.");
 
 mindustrylauncher.command("version", "Displays the version of MindustryLauncher.").aliases("v").args({}).impl((opts, app) => {
 	const packagePath = path.join(app.sourceDirectory, "package.json");
 	try {
 		const fileData = fs.readFileSync(packagePath, "utf-8");
 		const packageData = JSON.parse(fileData) as { version: string };
-		log(`MindustryLauncher version ${packageData["version"]}`);
+		log(`MindustryLauncher version ${packageData.version}`);
 	} catch(err){
 		if(err && (err as NodeJS.ErrnoException).code == "ENOENT"){
 			error("Package.json file does not exist! This is likely caused by an improper or corrupt installation.");
@@ -77,7 +77,7 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
 		);
 	} else if(opts.namedArgs.disable){
 		const modData = await fsP.readdir(state.modsDirectory);
-		const modfile = modData.find(f => f.toLowerCase().includes(opts.namedArgs["disable"]!));
+		const modfile = modData.find(f => f.toLowerCase().includes(opts.namedArgs.disable!));
 		if(modfile){
 			const modfilePath = path.join(state.modsDirectory, modfile);
 			if((await fsP.stat(modfilePath)).isFile()){

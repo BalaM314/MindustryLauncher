@@ -14,12 +14,10 @@ import { Version } from "./mindustrylauncher";
 
 
 
-export interface Settings {
+export type Settings = {
 	mindustryJars: {
 		folderPath: string;
-		customVersionNames: {
-			[index: string]: string;
-		}
+		customVersionNames: Record<string, string>
 	};
 	jvmArgs: string[];
 	processArgs: string[];
@@ -35,7 +33,7 @@ export interface Settings {
 	};
 }
 
-export interface State {
+export type State = {
 	settings: Settings;
 	/**The path of the Mindustry data directory. */
 	mindustryDirectory: string;
@@ -52,10 +50,10 @@ export interface State {
 	mindustryArgs: string[];
 	jvmArgs: string[];
 	version: Version;
-	externalMods: {
+	externalMods: Array<{
 		path: string;
 		type: "file" | "dir" | "java" | "invalid";
-	}[];
+	}>;
 	buildMods: boolean;
 }
 
@@ -66,5 +64,5 @@ export type LaunchOptions = {
 		buildMods?: boolean;
 		info?: boolean;
 	};
-	positionalArgs: (string | undefined)[];
+	positionalArgs: Array<string | undefined>;
 };

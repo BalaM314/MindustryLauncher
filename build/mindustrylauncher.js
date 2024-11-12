@@ -7,13 +7,12 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 Contains functions that are part of the program code.
 */
-import { execSync, spawn } from "child_process";
-import { info } from "console";
-import * as fs from "fs";
-import { promises as fsP } from "fs";
-import * as os from "os";
-import * as path from "path";
-import { ANSIEscape, CensorKeywordTransform, AppError, LoggerHighlightTransform, WindowedMean, copyDirectory, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError, crash } from "./funcs.js";
+import { execSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import fsP from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { ANSIEscape, AppError, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     const d = new Date();
@@ -54,7 +53,7 @@ function startProcess(state) {
 /**Restarts the mindustry process. */
 async function restart(state, build, compile) {
     if (build && compile) {
-        error("How were you able to trigger a rebuild and a recompile at the same time? Restarting...");
+        log("Rebuilding mods, recompiling, and restarting...");
     }
     else if (build) {
         log("Rebuilding mods and restarting...");
@@ -67,6 +66,7 @@ async function restart(state, build, compile) {
     }
     state.mindustryProcess?.removeAllListeners();
     state.mindustryProcess?.kill("SIGTERM"); //todo see if this causes issues
+    state.mindustryProcess = null;
     state.buildMods = build;
     if (compile) {
         if (state.version.isSourceDirectory) {
@@ -106,19 +106,21 @@ export async function copyMods(state) {
                 log(`Copying java mod directory "${mod.path}"`);
             }
             const modFileName = (await fsP.readdir(path.join(mod.path, "build", "libs")))
-                .filter(n => n.endsWith(".jar"))[0];
-            const modFilePath = path.join(mod.path, "build", "libs", modFileName);
-            if (!fs.existsSync(modFilePath)) {
-                if (state.buildMods) {
-                    error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. There may be an issue with your mod's build.gradle file.`);
+                .find(n => n.endsWith(".jar"));
+            if (modFileName) {
+                const modFilePath = path.join(mod.path, "build", "libs", modFileName);
+                if (!fs.existsSync(modFilePath)) {
+                    if (state.buildMods) {
+                        error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. There may be an issue with your mod's build.gradle file.`);
+                    }
+                    else {
+                        error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. This may be because the mod has not been built yet. Run "gradlew jar" to build the mod, or specify --buildMods.`);
+                    }
                 }
                 else {
-                    error(`Java mod directory "${mod.path}" does not have a mod file in build/libs/, skipping copying. This may be because the mod has not been built yet. Run "gradlew jar" to build the mod, or specify --buildMods.`);
+                    const modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
+                    await fsP.copyFile(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
                 }
-            }
-            else {
-                const modName = modFileName.match(/[^/\\:*?"<>]+?(?=(Desktop?\.jar$))/i)?.[0];
-                await fsP.copyFile(modFilePath, path.join(state.modsDirectory, modName + ".jar"));
             }
         }
         else if (mod.type == "dir") {
@@ -204,9 +206,9 @@ export class Version {
             if (versionType == null || versionNumber == null)
                 fail(`Invalid version ${version}`);
             if (versionNumber == "latest") {
-                info(`Getting latest ${versionType} version...`);
+                log(`Getting latest ${versionType} version...`);
                 versionNumber = await this.getLatestVersion(versionType);
-                info(`Resolved version ${version} to ${versionType}-${versionNumber}`);
+                log(`Resolved version ${version} to ${versionType}-${versionNumber}`);
             }
             filepath = path.join(state.settings.mindustryJars.folderPath, `v${versionUrls[versionType].prefix}${versionNumber}.jar`);
         }
@@ -274,9 +276,7 @@ export class Version {
         const versionData = versionUrls[name];
         const resolvedUrl = await resolveRedirect(versionData.getLatestVersion[0]);
         const result = versionData.getLatestVersion[1].exec(resolvedUrl);
-        if (result == null || result[1] == undefined)
-            throw new Error(`regex /${versionData.getLatestVersion[1].source}/ did not match resolved url ${resolvedUrl} for version ${name}`);
-        return result[1];
+        return result?.[1] ?? crash(`regex /${versionData.getLatestVersion[1].source}/ did not match resolved url ${resolvedUrl} for version ${name}`);
     }
 }
 Version.builtJarLocation = "desktop/build/libs/Mindustry.jar";
@@ -322,17 +322,17 @@ export function launch(state) {
             if (mod.type == "file")
                 fs.watchFile(mod.path, () => {
                     log(`File change detected! (${mod.path})`);
-                    restart(state, true, false);
+                    void restart(state, true, false);
                 });
             else if (mod.type == "dir")
                 fs.watchFile(mod.path, () => {
                     log(`File change detected! (${mod.path})`);
-                    restart(state, true, false);
+                    void restart(state, true, false);
                 });
             else if (mod.type == "java")
                 fs.watchFile(state.settings.watchWholeJavaModDirectory ? mod.path : path.join(mod.path, "build/libs"), () => {
                     log(`File change detected! (${mod.path})`);
-                    restart(state, true, false);
+                    void restart(state, true, false);
                 });
         }
     }
@@ -341,15 +341,15 @@ export function handleCommand(input, state) {
     switch (input.split(" ")[0].toLowerCase()) {
         case "rs":
         case "restart":
-            restart(state, false, false);
+            void restart(state, false, false);
             break;
         case "rb":
         case "rebuild":
-            restart(state, true, false);
+            void restart(state, true, false);
             break;
         case "rc":
         case "recompile":
-            restart(state, false, true);
+            void restart(state, false, true);
             break;
         case "?":
         case "h":
