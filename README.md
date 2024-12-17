@@ -1,5 +1,6 @@
 # MindustryLauncher
 A custom launcher for Mindustry built with TypeScript and Node.
+
 ![image](https://github.com/BalaM314/MindustryLauncher/assets/71201189/148c8ece-25a1-46a0-8e35-168a4e8a2eb3)
 
 
@@ -20,6 +21,7 @@ A custom launcher for Mindustry built with TypeScript and Node.
 ## Installation
 
 Supported operating systems: Windows, Linux, MacOS
+
 Requirements: Node.JS and NPM
 
 1. Run `npm i -g mindustrylauncher`
