@@ -105,7 +105,17 @@ export async function copyMods(state) {
             else {
                 log(`Copying java mod directory "${mod.path}"`);
             }
-            const modFileName = (await fsP.readdir(path.join(mod.path, "build", "libs")))
+            const modBuildFolder = path.join(mod.path, "build", "libs");
+            const modFileName = (await fsP.readdir(modBuildFolder).catch(async () => {
+                //mod build folder doesn't exist
+                //Check for build.gradle
+                if (!state.buildMods) {
+                    const gradleExists = fsP.access(path.join(mod.path, "build.gradle"), fs.constants.R_OK);
+                    gradleExists.catch(() => { });
+                    await gradleExists.then(() => fail(`Could not read the build folder at ${mod.path}. Please build the mod first by passing "--build".`));
+                }
+                fail(`Could not read the build folder at ${mod.path}. Are you sure this is a Mindustry java mod directory?`);
+            }))
                 .find(n => n.endsWith(".jar"));
             if (modFileName) {
                 const modFilePath = path.join(mod.path, "build", "libs", modFileName);

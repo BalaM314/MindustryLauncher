@@ -40,6 +40,9 @@ export default tseslint.config(
 			"@typescript-eslint/no-unused-vars": "off",
 			"@typescript-eslint/no-unsafe-function-type": "off",
 			"@typescript-eslint/no-empty-object-type": "off",
+			"@typescript-eslint/no-empty-function": ["warn", {
+				allow: ["arrowFunctions"]
+			}],
 			"@typescript-eslint/prefer-promise-reject-errors": "off",
 			"@typescript-eslint/consistent-type-definitions": ["error", "type"],
 			"@typescript-eslint/no-explicit-any": "off",
