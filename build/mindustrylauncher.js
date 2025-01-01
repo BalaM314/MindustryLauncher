@@ -7,7 +7,7 @@ You should have received a copy of the GNU Lesser General Public License along w
 
 Contains functions that are part of the program code.
 */
-import { execSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import fsP from "node:fs/promises";
 import os from "node:os";
@@ -92,9 +92,19 @@ export async function copyMods(state) {
                 log(`Building and copying java mod directory "${mod.path}"`);
                 const preBuildTime = Date.now();
                 try {
-                    execSync("gradlew jar", {
-                        cwd: mod.path
+                    const isWindows = os.platform() == "win32";
+                    const gradlePath = isWindows ? `${mod.path}/gradlew.bat` : `${mod.path}/gradlew`;
+                    const gradleProcess = spawn(gradlePath, ["jar"], {
+                        cwd: mod.path,
+                        shell: isWindows,
                     });
+                    [gradleProcess.stdout, gradleProcess.stderr].forEach(stream => stream
+                        .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
+                        .pipe(process.stdout));
+                    //wait until gradle exits
+                    const code = await new Promise(res => gradleProcess.on("exit", res));
+                    if (code != 0)
+                        throw new Error("non-zero exit code");
                 }
                 catch (err) {
                     fail(`Build failed!`);
@@ -299,10 +309,11 @@ export async function compileDirectory(path) {
         return false;
     }
     log("Compiling...");
-    const gradlePath = os.platform() == "win32" ? `${path}/gradlew.bat` : `${path}/gradlew`;
+    const isWindows = os.platform() == "win32";
+    const gradlePath = isWindows ? `${path}/gradlew.bat` : `${path}/gradlew`;
     const gradleProcess = spawn(gradlePath, ["desktop:dist"], {
         cwd: path,
-        shell: true
+        shell: isWindows,
     });
     [gradleProcess.stdout, gradleProcess.stderr].forEach(stream => stream
         .pipe(new (prependTextTransform(`${ANSIEscape.brightpurple}[Gradle]${ANSIEscape.reset}`)))
