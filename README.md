@@ -17,6 +17,7 @@ A custom launcher for Mindustry built with TypeScript and Node.
 * [x] Output highlighting
 * [x] Remove username from logs (configurable)
 * [x] Default JVM args (configurable)
+* [x] Schematic management features
 
 ## Installation
 
@@ -30,6 +31,6 @@ Requirements: Node.JS and NPM
 ## Usage
 CLI only.
 
-`mindustry [--compile] [--buildMods] --version <version> [-- jvmArgs...]`
+`mindustry --version <version> [--compile] [--buildMods] [<mindustryArgs>...] [-- <jvmArgs>...]`
 
 Run `mindustry help` for more information.

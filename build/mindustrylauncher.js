@@ -44,8 +44,9 @@ function startProcess(state) {
         if (statusCode == 0) {
             log("Process exited.");
         }
-        else {
+        else if (statusCode) {
             log(`Process crashed with exit code ${statusCode}!`);
+            process.exitCode = statusCode;
         }
         process.exit();
     });
@@ -457,7 +458,9 @@ export function init(opts, app) {
             });
         }
         const versionsPath = path.join(mindustryDirectory, "versions");
-        const templateConfig = fs.readFileSync("template-config.json", "utf-8").replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath));
+        const templateConfig = fs.readFileSync("template-config.json", "utf-8")
+            .replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath))
+            .replace(/\r?\n/g, os.EOL);
         fs.mkdirSync(versionsPath, { recursive: true });
         fs.writeFileSync(path.join(launcherDataPath, "config.json"), templateConfig);
         if (opts.commandName != "config")
