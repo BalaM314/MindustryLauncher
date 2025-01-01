@@ -148,7 +148,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
 		buildMods: arg().valueless().aliases("b")
 			.description("Whether or not to compile Java mod directories before copying.")
 	},
-	positionalArgsText: "[<mindustryArgs>...] [-- <jvmArgs>...]"
+	positionalArgsText: "[-- <jvmArgs>... [-- <mindustryArgs>...]]"
 }).impl(async (opts, app) => {
 	const state = init(opts, app);
 

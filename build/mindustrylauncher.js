@@ -480,8 +480,8 @@ export function init(opts, app) {
     let mindustryArgs;
     let jvmArgs = [];
     if (opts.positionalArgs.includes("--")) {
-        mindustryArgs = opts.positionalArgs.slice(0, opts.positionalArgs.lastIndexOf("--"));
-        jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
+        jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1, opts.positionalArgs.lastIndexOf("--"));
+        mindustryArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
     }
     else {
         mindustryArgs = opts.positionalArgs;

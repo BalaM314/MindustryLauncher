@@ -31,6 +31,6 @@ Requirements: Node.JS and NPM
 ## Usage
 CLI only.
 
-`mindustry --version <version> [--compile] [--buildMods] [<mindustryArgs>...] [-- <jvmArgs>...]`
+`mindustry --version <version> [--compile] [--buildMods] [-- <jvmArgs>... [-- <mindustryArgs>...]]`
 
 Run `mindustry help` for more information.
