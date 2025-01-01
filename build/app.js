@@ -12,7 +12,7 @@ import { promises as fsP } from "fs";
 import * as path from "path";
 import { spawnSync } from "child_process";
 import { Application, arg } from "@balam314/cli-app";
-import { AppError, askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
+import { askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
 export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.");
 mindustrylauncher.command("version", "Displays the version of MindustryLauncher.").aliases("v").args({}).impl((opts, app) => {
@@ -144,6 +144,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
         buildMods: arg().valueless().aliases("b")
             .description("Whether or not to compile Java mod directories before copying.")
     },
+    positionalArgsText: "[<mindustryArgs>...] [-- <jvmArgs>...]"
 }).impl(async (opts, app) => {
     const state = init(opts, app);
     state.version = await Version.fromInput(opts.namedArgs.version, state);
@@ -164,9 +165,8 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
     }
     if (!state.version.exists()) {
         error(`Version ${state.version.name()} has not been downloaded.`);
-        if (state.version.isCustom) {
-            throw new Error(`Logic error: nonexistent custom version not caught in fromInput`);
-        }
+        if (state.version.isCustom)
+            crash(`Logic error: nonexistent custom version not caught in fromInput`);
         if (await askYesOrNo("Would you like to download the file? [y/n]:")) {
             const downloaded = await state.version.download(state);
             if (!downloaded)
@@ -179,18 +179,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
             return 1;
         }
     }
-    try {
-        await copyMods(state);
-        launch(state);
-    }
-    catch (err) {
-        if (err instanceof AppError) {
-            error(err.message);
-            return 1;
-        }
-        else {
-            throw err;
-        }
-    }
+    await copyMods(state);
+    launch(state);
     //copy mods and launch
 });

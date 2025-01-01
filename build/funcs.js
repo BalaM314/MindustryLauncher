@@ -35,17 +35,8 @@ export function error(message) {
 export function debug(message) {
     console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
-export class AppError extends Error {
-    constructor() {
-        super(...arguments);
-        this.name = "AppError";
-    }
-}
-export function fail(message) {
-    throw new AppError(message);
-}
 export function crash(message) {
-    throw new AppError(message);
+    throw new Error(message);
 }
 /**Returns the proper highlight color for a line based on the character inside [x] */
 export function getLogHighlight(char) {

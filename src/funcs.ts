@@ -40,15 +40,8 @@ export function debug(message:string){
 	console.debug(`${ANSIEscape.gray}[DEBUG]${ANSIEscape.reset} ${message}${commandColor}`);
 }
 
-
-export class AppError extends Error {
-	name = "AppError";
-}
-export function fail(message:string):never {
-	throw new AppError(message);
-}
 export function crash(message:string):never {
-	throw new AppError(message);
+	throw new Error(message);
 }
 
 

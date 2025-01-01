@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@balam314/cli-app':
-        specifier: ^3.0.2
-        version: 3.0.2
+        specifier: ^3.3.0
+        version: 3.3.0
     devDependencies:
       '@types/node':
         specifier: ^20
@@ -24,8 +24,8 @@ importers:
 
 packages:
 
-  '@balam314/cli-app@3.0.2':
-    resolution: {integrity: sha512-OY/XxOOXV9d3UyfsV+LObSMcu7a/uzdloZCNP/EEy80nikMg45kZ9/FzIRLdflOU7XX7ErOG5gqnLonilYV72Q==}
+  '@balam314/cli-app@3.3.0':
+    resolution: {integrity: sha512-CB14j0PanXU11/Lq3nzt0ZLKB6NE/1DsmhNE2GmgBkFIlED2iXVFiTiYgHTK0EQJ6I9PpbXxmV6yADojo1fp0Q==}
 
   '@eslint-community/eslint-utils@4.4.1':
     resolution: {integrity: sha512-s3O3waFUrMV8P/XaF/+ZTp1X9XBZW1a4B97ZnjQF2KYWaFD2A8KyFBsrsfSjEmjn3RGWAIuvlneuZm3CUK3jbA==}
@@ -528,7 +528,7 @@ packages:
 
 snapshots:
 
-  '@balam314/cli-app@3.0.2': {}
+  '@balam314/cli-app@3.3.0': {}
 
   '@eslint-community/eslint-utils@4.4.1(eslint@9.14.0)':
     dependencies:

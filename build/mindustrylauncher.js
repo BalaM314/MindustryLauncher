@@ -12,7 +12,8 @@ import fs from "node:fs";
 import fsP from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { ANSIEscape, AppError, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
+import { ApplicationError, fail } from "@balam314/cli-app";
+import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     const d = new Date();
@@ -426,7 +427,7 @@ function validateSettings(input, username) {
         }
     }
     catch (err) {
-        if (err instanceof AppError) {
+        if (err instanceof ApplicationError) {
             fail(`Invalid settings: ${err.message}\nRun "mindustry config" to edit the settings file.`);
         }
         else {
@@ -473,9 +474,15 @@ export function init(opts, app) {
                 : "file"
             : (error(`External mod "${modPath}" does not exist.`), "invalid")
     }));
-    const jvmArgs = opts.positionalArgs.includes("--")
-        ? opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1)
-        : [];
+    let mindustryArgs;
+    let jvmArgs = [];
+    if (opts.positionalArgs.includes("--")) {
+        mindustryArgs = opts.positionalArgs.slice(0, opts.positionalArgs.lastIndexOf("--"));
+        jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
+    }
+    else {
+        mindustryArgs = opts.positionalArgs;
+    }
     return {
         settings,
         currentLogStream: null,
@@ -485,7 +492,7 @@ export function init(opts, app) {
         modsDirectory,
         username,
         versionName: opts.namedArgs.version ?? null, //TODO fix this mess
-        mindustryArgs: settings.processArgs,
+        mindustryArgs: settings.processArgs.concat(mindustryArgs),
         jvmArgs: settings.jvmArgs.concat(jvmArgs),
         externalMods,
         buildMods: opts.namedArgs.buildMods ?? false,

@@ -1,4 +1,4 @@
-import type { Application } from "@balam314/cli-app";
+import { type Application } from "@balam314/cli-app";
 import { LaunchOptions, State } from "./types.js";
 export declare function copyMods(state: State): Promise<void>;
 export declare const versionUrls: {

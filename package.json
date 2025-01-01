@@ -29,7 +29,7 @@
 		"typescript-eslint": "^8"
 	},
 	"dependencies": {
-		"@balam314/cli-app": "^3.0.2"
+		"@balam314/cli-app": "^3.3.0"
 	},
 	"engines": {
 		"node": ">=20"

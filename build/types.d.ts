@@ -49,5 +49,5 @@ export type LaunchOptions = {
         buildMods?: boolean;
         info?: boolean;
     };
-    positionalArgs: Array<string | undefined>;
+    positionalArgs: string[];
 };

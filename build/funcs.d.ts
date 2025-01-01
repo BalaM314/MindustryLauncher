@@ -16,10 +16,6 @@ export declare const ANSIEscape: {
 export declare function log(message: string): void;
 export declare function error(message: string): void;
 export declare function debug(message: string): void;
-export declare class AppError extends Error {
-    name: string;
-}
-export declare function fail(message: string): never;
 export declare function crash(message: string): never;
 /**Returns the proper highlight color for a line based on the character inside [x] */
 export declare function getLogHighlight(char: string | undefined): string;

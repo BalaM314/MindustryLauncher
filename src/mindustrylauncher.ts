@@ -10,13 +10,13 @@ Contains functions that are part of the program code.
 
 
 
-import { execSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import fsP from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { Application } from "@balam314/cli-app";
-import { ANSIEscape, AppError, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, fail, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
+import { ApplicationError, fail, type Application } from "@balam314/cli-app";
+import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
 import { LaunchOptions, Settings, State } from "./types.js";
 
 
@@ -449,7 +449,7 @@ function validateSettings(input:unknown, username:string | null):asserts input i
 		}
 
 	} catch(err){
-		if(err instanceof AppError){
+		if(err instanceof ApplicationError){
 			fail(`Invalid settings: ${err.message}\nRun "mindustry config" to edit the settings file.`);
 		} else {
 			error("The following crash was possibly caused by an invalid settings file, try renaming it to automatically create a new one...");
@@ -500,9 +500,14 @@ export function init(opts:LaunchOptions, app:Application):State {
 				: "file"
 			: (error(`External mod "${modPath}" does not exist.`), "invalid") as "java" | "dir" | "file" | "invalid"
 	}));
-	const jvmArgs = opts.positionalArgs.includes("--")
-		? opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1) as string[]
-		: [];
+	let mindustryArgs:string[];
+	let jvmArgs:string[] = [];
+	if(opts.positionalArgs.includes("--")){
+		mindustryArgs = opts.positionalArgs.slice(0, opts.positionalArgs.lastIndexOf("--"));
+		jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
+	} else {
+		mindustryArgs = opts.positionalArgs;
+	}
 
 	return {
 		settings,
@@ -513,7 +518,7 @@ export function init(opts:LaunchOptions, app:Application):State {
 		modsDirectory,
 		username,
 		versionName: opts.namedArgs.version ?? null!, //TODO fix this mess
-		mindustryArgs: settings.processArgs,
+		mindustryArgs: settings.processArgs.concat(mindustryArgs),
 		jvmArgs: settings.jvmArgs.concat(jvmArgs),
 		externalMods,
 		buildMods: opts.namedArgs.buildMods ?? false,
