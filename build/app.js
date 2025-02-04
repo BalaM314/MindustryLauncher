@@ -10,10 +10,9 @@ Contains the mindustrylauncher Application.
 import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as path from "path";
-import { spawnSync } from "child_process";
 import { Application, arg } from "@balam314/cli-app";
-import { askYesOrNo, crash, error, formatFileSize, log, stringifyError, throwIfError } from "./funcs.js";
-import { compileDirectory, copyMods, init, launch, Version } from "./mindustrylauncher.js";
+import { askYesOrNo, crash, error, formatFileSize, log, spawnAsync, stringifyError } from "./funcs.js";
+import { compileDirectory, copyMods, init, launch, openDirectory, Version } from "./mindustrylauncher.js";
 export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.");
 mindustrylauncher.command("version", "Displays the version of MindustryLauncher.").aliases("v").args({}).impl((opts, app) => {
     const packagePath = path.join(app.sourceDirectory, "package.json");
@@ -50,7 +49,7 @@ You have ${jarFiles.length} version files, taking up a total file size of ${form
     }
     else {
         log(`Opening versions folder: ${state.settings.mindustryJars.folderPath}\nUse --info to get information about installed versions.`);
-        spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.mindustryJars.folderPath]);
+        await openDirectory(state.settings.mindustryJars.folderPath);
     }
 });
 mindustrylauncher.command("mods", "Opens the mods folder.").aliases("m").args({
@@ -85,16 +84,16 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
     }
     else {
         log(`Opening mods folder: ${state.modsDirectory}\nUse --info to get information about installed mods.`);
-        spawnSync(process.platform == "win32" ? "explorer" : "open", [state.modsDirectory]);
+        await openDirectory(state.modsDirectory);
     }
 });
-mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({}).impl((opts, app) => {
+mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({}).impl(async (opts, app) => {
     const state = init(opts, app);
     const settingsPath = path.join(state.launcherDataPath, "config.json");
     log(`Opening ${settingsPath}`);
-    function openEditor(editor) {
+    async function openEditor(editor) {
         try {
-            throwIfError(spawnSync(editor, [settingsPath], { stdio: "inherit" }));
+            await spawnAsync(editor, [settingsPath], { stdio: "inherit" });
             log(`Editor closed.`);
             return true;
         }
@@ -106,12 +105,12 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.").al
     }
     log(`Editor closed.`);
     if (process.env["EDITOR"])
-        openEditor(process.env["EDITOR"]);
+        await openEditor(process.env["EDITOR"]);
     else {
         //try some defaults
         const defaults = ["nvim", "code", "code.cmd", "notepad", "nano", "vim"];
         for (const cmd of defaults) {
-            if (openEditor(cmd))
+            if (await openEditor(cmd))
                 return 0;
         }
         error(`Could not find an editor. Please set the EDITOR environment variable and try again.`);
@@ -132,7 +131,8 @@ mindustrylauncher.command("logs", "Opens the logs folder").aliases("l").args({
         log(`You have ${files.length} log files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
     }
     else {
-        spawnSync(process.platform == "win32" ? "explorer" : "open", [state.settings.logging.path]);
+        log(`Opening logs folder: ${state.settings.logging.path}\nUse --info to get information about log files.`);
+        await openDirectory(state.settings.logging.path);
     }
 });
 mindustrylauncher.command("launch", "Launches Mindustry.").default().args({

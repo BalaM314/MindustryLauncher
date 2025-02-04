@@ -13,7 +13,7 @@ import fsP from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ApplicationError, fail } from "@balam314/cli-app";
-import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
+import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     const d = new Date();
@@ -163,6 +163,17 @@ export async function copyMods(state) {
         for (const modTask of modTasks) {
             await modTask;
         }
+}
+export async function openDirectory(directory) {
+    await spawnAsync(process.platform == "win32" ? "explorer" : "xdg-open", [directory], { stdio: "ignore" })
+        .catch(e => {
+        if (e instanceof Error)
+            fail(`Failed to open the directory: ${e.message}`);
+        else if (typeof e == "string")
+            error(`Process exited with ${e}`);
+        else
+            throw e;
+    });
 }
 export const versionUrls = {
     foo: {

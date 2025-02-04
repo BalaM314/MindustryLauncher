@@ -16,7 +16,7 @@ import fsP from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ApplicationError, fail, type Application } from "@balam314/cli-app";
-import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, stringifyError } from "./funcs.js";
+import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
 import { LaunchOptions, Settings, State } from "./types.js";
 
 
@@ -179,6 +179,15 @@ export async function copyMods(state:State){
 
 	if(state.settings.buildModsConcurrently) await Promise.all(modTasks);
 	else for(const modTask of modTasks){ await modTask; }
+}
+
+export async function openDirectory(directory:string){
+	await spawnAsync(process.platform == "win32" ? "explorer" : "xdg-open", [directory], { stdio: "ignore" })
+		.catch(e => {
+			if(e instanceof Error) fail(`Failed to open the directory: ${e.message}`);
+			else if(typeof e == "string") error(`Process exited with ${e}`);
+			else throw e;
+		});
 }
 
 type VersionType = {

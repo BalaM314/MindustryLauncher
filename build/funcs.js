@@ -11,6 +11,7 @@ import * as fs from "fs";
 import * as https from "https";
 import * as path from "path";
 import * as readline from "readline";
+import { spawn } from "child_process";
 import { Transform } from "stream";
 export const ANSIEscape = {
     "red": `\u001b[0;31m`,
@@ -254,6 +255,20 @@ export function resolveRedirect(url) {
             else {
                 reject(`Error: Server did not respond with redirect location.`);
             }
+        });
+    });
+}
+/** @throws NodeJS.Signals | Error */
+export function spawnAsync(command, args, options = {}) {
+    const proc = spawn(command, args, options);
+    return new Promise((resolve, reject) => {
+        proc.on("error", reject);
+        proc.on("exit", (code, signal) => {
+            if (code == null)
+                reject(signal);
+            if (code !== 0)
+                reject(new Error(`Non-zero exit code: ${code}`));
+            resolve();
         });
     });
 }
