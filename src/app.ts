@@ -146,7 +146,9 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
 		compile: arg().valueless().aliases("c")
 			.description("Whether or not to compile a version before launching, if it points to a Mindustry source directory."),
 		buildMods: arg().valueless().aliases("b")
-			.description("Whether or not to compile Java mod directories before copying.")
+			.description("Whether or not to compile Java mod directories before copying."),
+		yes: arg().valueless().aliases("y")
+			.description("Skips prompt to confirm downloading a new version."),
 	},
 	positionalArgsText: "[-- <jvmArgs>... [-- <mindustryArgs>...]]"
 }).impl(async (opts, app) => {
@@ -172,7 +174,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
 	if(!state.version.exists()){
 		error(`Version ${state.version.name()} has not been downloaded.`);
 		if(state.version.isCustom) crash(`Logic error: nonexistent custom version not caught in fromInput`);
-		if(await askYesOrNo("Would you like to download the file? [y/n]:")){
+		if(opts.namedArgs.yes || await askYesOrNo("Would you like to download the file? [y/n]:")){
 			const downloaded = await state.version.download(state);
 			if(!downloaded) return 1;
 			//Download was successful
