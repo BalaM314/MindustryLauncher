@@ -15,6 +15,12 @@ export declare const versionUrls: {
         prefix: string;
         numberValidator: RegExp;
     };
+    "foo-v8": {
+        url: (version: string) => string;
+        getLatestVersion: [string, RegExp];
+        prefix: string;
+        numberValidator: RegExp;
+    };
     be: {
         url: (version: string) => string;
         getLatestVersion: [string, RegExp];

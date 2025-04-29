@@ -188,6 +188,12 @@ export const versionUrls = {
         prefix: "foo-v6-",
         numberValidator: /^(\d+|latest)$/,
     },
+    "foo-v8": {
+        url: version => `https://github.com/mindustry-antigrief/mindustry-client-v8-builds/releases/download/${version}/desktop.jar`,
+        getLatestVersion: [`https://github.com/mindustry-antigrief/mindustry-client-v8-builds/releases/latest`, /(?<=\/tag\/)(\d+)/],
+        prefix: "foo-v8-",
+        numberValidator: /^(\d+|latest)$/,
+    },
     be: {
         url: version => `https://github.com/Anuken/MindustryBuilds/releases/download/${version}/Mindustry-BE-Desktop-${version}.jar`,
         getLatestVersion: [`https://github.com/Anuken/MindustryBuilds/releases/latest`, /(?<=\/tag\/)(\d+)/],
