@@ -281,7 +281,15 @@ export class Version {
         if (this.versionNumber == "latest")
             crash("Logic error: version's number was 'latest'.");
         return {
-            url: await resolveRedirect(versionData.url(this.versionNumber)),
+            url: await resolveRedirect(versionData.url(this.versionNumber)).catch(err => {
+                if (err instanceof Error && err.message == "Version does not exist." &&
+                    this.versionType?.startsWith("foo")) {
+                    const possibleVersions = ["foo-v6", "foo", "foo-v8"].filter(v => v !== this.versionType);
+                    throw new Error(`Version does not exist. Did you mean ${possibleVersions.map(v => `${v}-${this.versionNumber}`).join(" or ")}?`);
+                }
+                else
+                    throw err;
+            }),
             jarName: `v${versionData.prefix}${this.versionNumber}.jar`
         };
     }
