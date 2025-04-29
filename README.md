@@ -28,6 +28,13 @@ Requirements: Node.JS and NPM
 1. Run `npm i -g mindustrylauncher`
 2. Run `mindustry config`.
 
+## Supported version types:
+* Vanilla: no prefix
+* Bleeding edge: `be-`
+* Foos v6: `foo-v6-`
+* Foos v7: `foo-`
+* Foos v8: `foo-v8-`
+
 ## Usage
 CLI only.
 
