@@ -57,7 +57,7 @@ export declare function parseJSONC(data: string): unknown;
 export declare function throwIfError(output: SpawnSyncReturns<Buffer>): void;
 export declare function stringifyError(err: unknown): string;
 export declare function downloadFile(url: string, outputPath: string, changed?: (downloaded: number, total: number) => unknown): Promise<unknown>;
-export declare function formatFileSize(bytes: number): string;
+export declare function formatFileSize(bytes: number, b?: string): string;
 export declare function resolveRedirect(url: string): Promise<string>;
 /** @throws NodeJS.Signals | Error */
 export declare function spawnAsync(command: string, args: readonly string[], options?: SpawnOptions): Promise<void>;

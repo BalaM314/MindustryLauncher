@@ -252,11 +252,11 @@ export function downloadFile(url:string, outputPath:string, changed?:(downloaded
 	});
 }
 
-export function formatFileSize(bytes:number):string {
-	if(bytes < 1e3) return `${bytes} B`;
-	if(bytes < 1e6) return `${(bytes / 1e3).toFixed(2)} KB`;
-	if(bytes < 1e9) return `${(bytes / 1e6).toFixed(2)} MB`;
-	else return `${(bytes / 1e9).toFixed(2)} GB`;
+export function formatFileSize(bytes:number, b = 'B'):string {
+	if(bytes < 1e3) return `${bytes} ${b}`;
+	if(bytes < 1e6) return `${(bytes / 1e3).toFixed(2)} K${b}`;
+	if(bytes < 1e9) return `${(bytes / 1e6).toFixed(2)} M${b}`;
+	else return `${(bytes / 1e9).toFixed(2)} G${b}`;
 }
 
 export function resolveRedirect(url:string):Promise<string> {

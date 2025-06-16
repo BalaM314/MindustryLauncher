@@ -330,7 +330,7 @@ export class Version {
 					const barProgress = Math.floor(downloaded / total * barWidth);
 					process.stdout.write(
 `\x1B[1A
-  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0))}/s)   `
+  [${"=".repeat(barProgress) + " ".repeat(barWidth - barProgress)}] ${formatFileSize(downloaded).padEnd(10, " ")}/ ${formatFileSize(total).padEnd(10, " ")}(${formatFileSize(downloadSpeed.mean(25, 0), 'b')}/s)   `
 					);
 				}
 			});
