@@ -1,6 +1,6 @@
 {
 	"name": "mindustrylauncher",
-	"version": "1.4.10",
+	"version": "1.4.11",
 	"description": "A custom Mindustry launcher, with useful features like auto-restart and better logging.",
 	"main": "build/index.js",
 	"scripts": {
@@ -26,10 +26,11 @@
 	"devDependencies": {
 		"@types/node": "^20",
 		"eslint": "^9",
+		"typescript": "^5.8.3",
 		"typescript-eslint": "^8"
 	},
 	"dependencies": {
-		"@balam314/cli-app": "^3.3.0"
+		"@balam314/cli-app": "^3.4.0"
 	},
 	"engines": {
 		"node": ">=20"

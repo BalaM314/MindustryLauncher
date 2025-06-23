@@ -486,7 +486,16 @@ export function init(opts, app) {
         const templateConfig = fs.readFileSync("template-config.json", "utf-8")
             .replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath))
             .replace(/\r?\n/g, os.EOL);
-        fs.mkdirSync(versionsPath, { recursive: true });
+        try {
+            fs.mkdirSync(versionsPath, { recursive: true });
+        }
+        catch (err) {
+            if (err?.code === 'EEXIST') {
+                //file already exists, that's fine
+            }
+            else
+                throw err;
+        }
         fs.writeFileSync(path.join(launcherDataPath, "config.json"), templateConfig);
         if (opts.commandName != "config")
             log("Currently using default settings: run `mindustry config` to edit the settings file.");

@@ -13,7 +13,9 @@ import * as path from "path";
 import { Application, arg } from "@balam314/cli-app";
 import { askYesOrNo, crash, error, formatFileSize, log, spawnAsync, stringifyError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, openDirectory, Version } from "./mindustrylauncher.js";
-export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.");
+export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.", {
+    sourceDirectorySuffix: '..'
+});
 mindustrylauncher.command("version", "Displays the version of MindustryLauncher.").aliases("v").args({}).impl((opts, app) => {
     const packagePath = path.join(app.sourceDirectory, "package.json");
     try {
