@@ -23,6 +23,8 @@
 		"-Dpolicone",
 		"-XX:+ShowCodeDetailsInExceptionMessages"
 	],
+	//Use this to specify a custom java path or command:
+	// "javaPath": "C:\\Program Files\\Java\\jre-17\\bin\\java.exe"
 	"processArgs": [
 		//List of args to pass to the actual process. Not sure why you would want this.
 	],

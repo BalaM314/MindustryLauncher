@@ -7,6 +7,7 @@ export type Settings = {
         customVersionNames: Record<string, string>;
     };
     jvmArgs: string[];
+    javaPath?: string;
     processArgs: string[];
     externalMods: string[];
     restartAutomaticallyOnModUpdate: boolean;
@@ -30,6 +31,8 @@ export type State = {
     /**The current user's username, used to censor it in log output. */
     username: string | null;
     settingsPath: string;
+    /** The java command to use. */
+    javaPath: string;
     /**The named arguments passed to the program. */
     versionName: string;
     mindustryProcess: ChildProcess | null;

@@ -24,7 +24,7 @@ import { LaunchOptions, Settings, State } from "./types.js";
 
 function startProcess(state:State){
 	const proc = spawn(
-		"java",
+		state.javaPath,
 		[...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs],
 		{ shell: false }
 	);
@@ -33,7 +33,11 @@ function startProcess(state:State){
 		if((err as NodeJS.ErrnoException).code === 'ENOENT'){
 			//Couldn't find java
 			error(String(err));
-			error('Failed to find Java. Do you have Java installed?');
+			if(state.javaPath === "java"){
+				error('Failed to find Java. Do you have Java installed?');
+			} else {
+				error(`Failed to find Java, using path "${state.javaPath}" specified by configuration file. If this is incorrect, run \`mindustry config\` to edit the configuration file.`);
+			}
 			process.exit(5);
 		} else throw err;
 	});
@@ -483,12 +487,10 @@ function validateSettings(input:unknown, username:string | null):asserts input i
 		}
 
 	} catch(err){
-		if(err instanceof ApplicationError){
-			fail(`Invalid settings: ${err.message}\nRun "mindustry config" to edit the settings file.`);
-		} else {
-			error("The following crash was possibly caused by an invalid settings file, try renaming it to automatically create a new one...");
-			throw err;
+		if(!(err instanceof ApplicationError)){
+			error("The following crash was possibly caused by an invalid settings file");
 		}
+		throw err;
 	}
 }
 
@@ -564,6 +566,9 @@ export function init(opts:LaunchOptions, app:Application):State {
 				error('Alternatively, you can delete or rename the settings file, and a valid one will be created automatically.');
 				fail('Invalid settings file!');
 			}
+		},
+		javaPath(){
+			return this.settings().javaPath ?? "java";
 		},
 		externalMods(){
 			return this.settings().externalMods.map(modPath => ({

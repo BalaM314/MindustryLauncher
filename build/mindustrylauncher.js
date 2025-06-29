@@ -15,12 +15,17 @@ import path from "node:path";
 import { ApplicationError, fail } from "@balam314/cli-app";
 import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, memoizeGetters, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
 function startProcess(state) {
-    const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
+    const proc = spawn(state.javaPath, [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     proc.on("error", err => {
         if (err.code === 'ENOENT') {
             //Couldn't find java
             error(String(err));
-            error('Failed to find Java. Do you have Java installed?');
+            if (state.javaPath === "java") {
+                error('Failed to find Java. Do you have Java installed?');
+            }
+            else {
+                error(`Failed to find Java, using path "${state.javaPath}" specified by configuration file. If this is incorrect, run \`mindustry config\` to edit the configuration file.`);
+            }
             process.exit(5);
         }
         else
@@ -463,13 +468,10 @@ function validateSettings(input, username) {
         }
     }
     catch (err) {
-        if (err instanceof ApplicationError) {
-            fail(`Invalid settings: ${err.message}\nRun "mindustry config" to edit the settings file.`);
+        if (!(err instanceof ApplicationError)) {
+            error("The following crash was possibly caused by an invalid settings file");
         }
-        else {
-            error("The following crash was possibly caused by an invalid settings file, try renaming it to automatically create a new one...");
-            throw err;
-        }
+        throw err;
     }
 }
 /**Returns a State given process args. */
@@ -544,6 +546,9 @@ export function init(opts, app) {
                 error('Alternatively, you can delete or rename the settings file, and a valid one will be created automatically.');
                 fail('Invalid settings file!');
             }
+        },
+        javaPath() {
+            return this.settings().javaPath ?? "java";
         },
         externalMods() {
             return this.settings().externalMods.map(modPath => ({
