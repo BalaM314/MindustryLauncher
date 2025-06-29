@@ -37,21 +37,26 @@ mindustrylauncher.command("versions", "Opens the versions folder.").aliases("vs"
     namedArgs: {
         info: arg().aliases("i").valueless()
             .description("Shows information about your versions instead of opening the versions folder."),
+        path: arg().aliases("p").valueless()
+            .description("Prints the path to the versions folder and nothing else, for use in scripting."),
     }
 }).impl(async (opts, app) => {
-    const state = init(opts, app);
-    if (opts.namedArgs.info) {
-        const jarFiles = (await fsP.readdir(state.settings.mindustryJars.folderPath))
+    const { settings } = init(opts, app);
+    if (opts.namedArgs.path) {
+        console.log(settings.mindustryJars.folderPath);
+    }
+    else if (opts.namedArgs.info) {
+        const jarFiles = (await fsP.readdir(settings.mindustryJars.folderPath))
             .filter(filename => filename.startsWith("v") && path.extname(filename) == ".jar");
         //Only show mindustry version jar files
-        const fileData = await Promise.all(jarFiles.map(file => fsP.stat(path.join(state.settings.mindustryJars.folderPath, file))));
+        const fileData = await Promise.all(jarFiles.map(file => fsP.stat(path.join(settings.mindustryJars.folderPath, file))));
         log(`List of installed versions:
 ${jarFiles.map(f => f.split(".")[0]).join(", ")}
 You have ${jarFiles.length} version files, taking up a total file size of ${formatFileSize(fileData.reduce((acc, item) => acc + item.size, 0))}`);
     }
     else {
-        log(`Opening versions folder: ${state.settings.mindustryJars.folderPath}\nUse --info to get information about installed versions.`);
-        await openDirectory(state.settings.mindustryJars.folderPath);
+        log(`Opening versions folder: ${settings.mindustryJars.folderPath}\nUse --info to get information about installed versions.`);
+        await openDirectory(settings.mindustryJars.folderPath);
     }
 });
 mindustrylauncher.command("mods", "Opens the mods folder.").aliases("m").args({
@@ -60,10 +65,15 @@ mindustrylauncher.command("mods", "Opens the mods folder.").aliases("m").args({
             .description("Shows information about your mods instead of opening the mods folder."),
         disable: arg().aliases("d").optional()
             .description("Force disable a mod by putting .disabled in the file extension."),
+        path: arg().aliases("p").valueless()
+            .description("Prints the path to the mods folder and nothing else, for use in scripting."),
     }
 }).impl(async (opts, app) => {
     const state = init(opts, app);
-    if (opts.namedArgs.info) {
+    if (opts.namedArgs.path) {
+        console.log(state.modsDirectory);
+    }
+    else if (opts.namedArgs.info) {
         const modData = await fsP.readdir(state.modsDirectory);
         const fileData = await Promise.all(modData.map(file => fsP.stat(path.join(state.modsDirectory, file))));
         log(`List of installed mods:
@@ -89,9 +99,17 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
         await openDirectory(state.modsDirectory);
     }
 });
-mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({}).impl(async (opts, app) => {
-    const { launcherDataPath } = init(opts, app);
-    const settingsPath = path.join(launcherDataPath, "config.json");
+mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({
+    namedArgs: {
+        path: arg().aliases("p").valueless()
+            .description("Prints the path to the config file and nothing else, for use in scripting."),
+    },
+}).impl(async (opts, app) => {
+    const { settingsPath } = init(opts, app);
+    if (opts.namedArgs.path) {
+        console.log(settingsPath);
+        return;
+    }
     log(`Opening ${settingsPath}`);
     async function openEditor(editor) {
         try {
@@ -123,10 +141,16 @@ mindustrylauncher.command("logs", "Opens the logs folder").aliases("l").args({
     namedArgs: {
         info: arg().valueless().aliases("i")
             .description("Shows information about your logs instead of the logs folder."),
+        path: arg().aliases("p").valueless()
+            .description("Prints the path to the logs folder and nothing else, for use in scripting."),
     }
 }).impl(async (opts, app) => {
     const state = init(opts, app);
-    if (opts.namedArgs.info) {
+    if (opts.namedArgs.path) {
+        console.log(state.settings.logging.path);
+        return;
+    }
+    else if (opts.namedArgs.info) {
         const files = (await fsP.readdir(state.settings.logging.path))
             .map(filename => path.join(state.settings.logging.path, filename));
         const fileData = await Promise.all(files.map(file => fsP.stat(file)));

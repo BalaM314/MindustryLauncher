@@ -43,6 +43,7 @@ export type State = {
 	launcherDataPath: string;
 	/**The current user's username, used to censor it in log output. */
 	username: string | null;
+	settingsPath: string;
 	/**The named arguments passed to the program. */
 	versionName: string;
 	mindustryProcess: ChildProcess | null;
@@ -63,6 +64,7 @@ export type LaunchOptions = {
 		version?: string;
 		buildMods?: boolean;
 		info?: boolean;
+		path?: boolean;
 	};
 	positionalArgs: string[];
 };

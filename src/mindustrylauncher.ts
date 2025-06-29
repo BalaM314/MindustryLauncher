@@ -517,9 +517,11 @@ export function init(opts:LaunchOptions, app:Application):State {
 		username(){
 			return process.env["USERNAME"] ?? process.env["USER"] ?? null;
 		},
+		settingsPath(){
+			return path.join(this.launcherDataPath(), "config.json");
+		},
 		settings(){
-			const configPath = path.join(this.launcherDataPath(), "config.json");
-			if(!fs.existsSync(configPath)){
+			if(!fs.existsSync(this.settingsPath())){
 				log("No settings file found, creating one. If this is your first launch, this is fine.");
 				if(!fs.existsSync(this.launcherDataPath())){
 					fs.mkdirSync(this.launcherDataPath(), {
@@ -537,19 +539,19 @@ export function init(opts:LaunchOptions, app:Application):State {
 						//file already exists, that's fine
 					} else throw err;
 				}
-				fs.writeFileSync(configPath, templateConfig);
+				fs.writeFileSync(this.settingsPath(), templateConfig);
 				if(opts.commandName != "config") log("Currently using default settings: run `mindustry config` to edit the settings file.");
 			}
 
 			try {
-				const settings = parseJSONC(fs.readFileSync(configPath, "utf-8"));
+				const settings = parseJSONC(fs.readFileSync(this.settingsPath(), "utf-8"));
 				validateSettings(settings, this.username());
 				return settings satisfies Settings;
 			} catch(err) {
 				error('Invalid settings file!');
 				error(err instanceof Error ? err.message : String(err));
 				process.stdout.write(os.EOL);
-				error(`Run \`mindustry config\` to edit the settings file. It is located at ${configPath}`);
+				error(`Run \`mindustry config\` to edit the settings file. It is located at ${this.settingsPath()}`);
 				error('Alternatively, you can delete or rename the settings file, and a valid one will be created automatically.');
 				fail('Invalid settings file!');
 			}
