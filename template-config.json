@@ -19,6 +19,7 @@
 		"-Xmx2G",
 		"-Xms1G",
 		//JVM arguments, don't touch if you don't understand.
+		"--enable-native-access=ALL-UNNAMED",
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
 		"-Dpolicone",
 		"-XX:+ShowCodeDetailsInExceptionMessages"
