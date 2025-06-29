@@ -493,8 +493,9 @@ export function init(opts, app) {
             return process.env["USERNAME"] ?? process.env["USER"] ?? null;
         },
         settings() {
-            if (!fs.existsSync(path.join(this.launcherDataPath(), "config.json"))) {
-                log("No config.json file found, creating one. If this is your first launch, this is fine.");
+            const configPath = path.join(this.launcherDataPath(), "config.json");
+            if (!fs.existsSync(configPath)) {
+                log("No settings file found, creating one. If this is your first launch, this is fine.");
                 if (!fs.existsSync(this.launcherDataPath())) {
                     fs.mkdirSync(this.launcherDataPath(), {
                         recursive: true
@@ -514,14 +515,23 @@ export function init(opts, app) {
                     else
                         throw err;
                 }
-                fs.writeFileSync(path.join(this.launcherDataPath(), "config.json"), templateConfig);
+                fs.writeFileSync(configPath, templateConfig);
                 if (opts.commandName != "config")
                     log("Currently using default settings: run `mindustry config` to edit the settings file.");
             }
-            const settings = parseJSONC(fs.readFileSync(path.join(this.launcherDataPath(), "config.json"), "utf-8"));
-            if (opts.commandName != "config")
+            try {
+                const settings = parseJSONC(fs.readFileSync(configPath, "utf-8"));
                 validateSettings(settings, this.username());
-            return settings;
+                return settings;
+            }
+            catch (err) {
+                error('Invalid settings file!');
+                error(err instanceof Error ? err.message : String(err));
+                process.stdout.write(os.EOL);
+                error(`Run \`mindustry config\` to edit the settings file. It is located at ${configPath}`);
+                error('Alternatively, you can delete or rename the settings file, and a valid one will be created automatically.');
+                fail('Invalid settings file!');
+            }
         },
         externalMods() {
             return this.settings().externalMods.map(modPath => ({
