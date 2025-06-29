@@ -16,9 +16,19 @@ import { ApplicationError, fail } from "@balam314/cli-app";
 import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, memoizeGetters, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
-    const d = new Date();
+    proc.on("error", err => {
+        if (err.code === 'ENOENT') {
+            //Couldn't find java
+            error(String(err));
+            error('Failed to find Java. Do you have Java installed?');
+            process.exit(5);
+        }
+        else
+            throw err;
+    });
     if (state.settings.logging.enabled) {
-        state.currentLogStream = fs.createWriteStream(path.join(`${state.settings.logging.path}`, `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`));
+        const now = new Date();
+        state.currentLogStream = fs.createWriteStream(path.join(`${state.settings.logging.path}`, `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}--${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}.txt`));
         //Creates a write stream and pipes the output of the mindustry process into it.
         let temp = proc.stdout;
         if (state.settings.logging.removeUsername && state.username != null)

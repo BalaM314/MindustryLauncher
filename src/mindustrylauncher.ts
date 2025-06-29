@@ -28,13 +28,22 @@ function startProcess(state:State){
 		[...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs],
 		{ shell: false }
 	);
-	const d = new Date();
 
+	proc.on("error", err => {
+		if((err as NodeJS.ErrnoException).code === 'ENOENT'){
+			//Couldn't find java
+			error(String(err));
+			error('Failed to find Java. Do you have Java installed?');
+			process.exit(5);
+		} else throw err;
+	});
+	
 	if(state.settings.logging.enabled){
+		const now = new Date();
 		state.currentLogStream = fs.createWriteStream(
 			path.join(
 				`${state.settings.logging.path}`,
-				`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}--${d.getHours()}-${d.getMinutes()}-${d.getSeconds()}.txt`
+				`${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}--${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}.txt`
 			)
 		);
 		//Creates a write stream and pipes the output of the mindustry process into it.
