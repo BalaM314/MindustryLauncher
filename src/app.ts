@@ -95,8 +95,8 @@ You have ${modData.length} mod files, taking up a total file size of ${formatFil
 });
 
 mindustrylauncher.command("config", "Opens the launcher's config.json file.").aliases("c").args({}).impl(async (opts, app) => {
-	const state = init(opts, app);
-	const settingsPath = path.join(state.launcherDataPath, "config.json");
+	const { launcherDataPath } = init(opts, app);
+	const settingsPath = path.join(launcherDataPath, "config.json");
 	log(`Opening ${settingsPath}`);
 	async function openEditor(editor:string):Promise<boolean> {
 		try {

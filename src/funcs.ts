@@ -290,3 +290,40 @@ export function spawnAsync(command:string, args:readonly string[], options:Spawn
 		});
 	});
 }
+
+/**
+ * Allows lazily computing properties of an object.
+ * Example usage:
+ * ```
+ * const foo = memoizeGetters({
+ * 	prop1(){
+ * 		console.log('reading file');
+ * 		return fs.readFileSync('file.json', 'utf-8');
+ * 	},
+ * 	prop2(){
+ * 		console.log('parsing json');
+ * 		return JSON.parse(this.prop1());
+ * 	}
+ * });
+ * 
+ * //Functions are converted to getter properties
+ * doSomething(foo.prop1); //outputs 'reading file'
+ * doSomething(foo.prop2); //outputs 'parsing json', but not 'reading file'
+ * doSomething(foo.prop2); //outputs nothing
+ * ```
+ */
+export function memoizeGetters<T extends Record<string, unknown>>(
+	input: {[K in keyof T]: () => T[K]}
+){
+	const cache: Record<string, unknown> = Object.create(null);
+	const functionsObject = Object.fromEntries(Object.entries(input).map(([k, v]) => [k, () => {
+		if(k in cache) return cache[k];
+		return cache[k] = v.call(functionsObject);
+	}]));
+	return Object.defineProperties({}, Object.fromEntries(Object.entries(functionsObject).map(([k, v]) => [k, {
+		configurable: true,
+		enumerable: true,
+		get: v,
+		set(x){ cache[k] = x; },
+	}]))) as T;
+}

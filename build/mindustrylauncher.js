@@ -13,7 +13,7 @@ import fsP from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { ApplicationError, fail } from "@balam314/cli-app";
-import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
+import { ANSIEscape, CensorKeywordTransform, LoggerHighlightTransform, WindowedMean, copyDirectory, crash, downloadFile, error, formatFileSize, getTimeComponent, log, memoizeGetters, parseJSONC, prependTextTransform, resolveRedirect, spawnAsync, stringifyError } from "./funcs.js";
 function startProcess(state) {
     const proc = spawn("java", [...state.jvmArgs, `-jar`, state.version.jarFilePath(), ...state.mindustryArgs], { shell: false });
     const d = new Date();
@@ -466,51 +466,6 @@ function validateSettings(input, username) {
 export function init(opts, app) {
     //Change working directory to the same as this program's index.js file
     process.chdir(app.sourceDirectory);
-    //Get a bunch of static things
-    const mindustryDirectory = process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
-        process.platform == "darwin" ? path.join(os.homedir(), "/Library/Application Support/Mindustry/") :
-            process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), "/.local/share")) + "/Mindustry/") :
-                fail(`Unsupported platform ${process.platform}`);
-    const modsDirectory = path.join(mindustryDirectory, "mods");
-    const launcherDataPath = path.join(mindustryDirectory, "launcher");
-    const username = process.env["USERNAME"] ?? process.env["USER"] ?? null;
-    //if settings file doesn't exist, 
-    if (!fs.existsSync(path.join(launcherDataPath, "config.json"))) {
-        log("No config.json file found, creating one. If this is your first launch, this is fine.");
-        if (!fs.existsSync(launcherDataPath)) {
-            fs.mkdirSync(launcherDataPath, {
-                recursive: true
-            });
-        }
-        const versionsPath = path.join(mindustryDirectory, "versions");
-        const templateConfig = fs.readFileSync("template-config.json", "utf-8")
-            .replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath))
-            .replace(/\r?\n/g, os.EOL);
-        try {
-            fs.mkdirSync(versionsPath, { recursive: true });
-        }
-        catch (err) {
-            if (err?.code === 'EEXIST') {
-                //file already exists, that's fine
-            }
-            else
-                throw err;
-        }
-        fs.writeFileSync(path.join(launcherDataPath, "config.json"), templateConfig);
-        if (opts.commandName != "config")
-            log("Currently using default settings: run `mindustry config` to edit the settings file.");
-    }
-    const settings = parseJSONC(fs.readFileSync(path.join(launcherDataPath, "config.json"), "utf-8"));
-    if (opts.commandName != "config")
-        validateSettings(settings, username);
-    const externalMods = settings.externalMods.map(modPath => ({
-        path: modPath,
-        type: fs.existsSync(modPath) ?
-            fs.lstatSync(modPath).isDirectory() ?
-                fs.existsSync(path.join(modPath, "build.gradle")) ? "java" : "dir"
-                : "file"
-            : (error(`External mod "${modPath}" does not exist.`), "invalid")
-    }));
     let mindustryArgs;
     let jvmArgs = [];
     if (opts.positionalArgs.includes("--")) {
@@ -520,19 +475,74 @@ export function init(opts, app) {
     else {
         mindustryArgs = opts.positionalArgs;
     }
-    return {
-        settings,
-        currentLogStream: null,
-        launcherDataPath,
-        mindustryDirectory,
-        mindustryProcess: null,
-        modsDirectory,
-        username,
-        versionName: opts.namedArgs.version ?? null, //TODO fix this mess
-        mindustryArgs: settings.processArgs.concat(mindustryArgs),
-        jvmArgs: settings.jvmArgs.concat(jvmArgs),
-        externalMods,
-        buildMods: opts.namedArgs.buildMods ?? false,
-        version: null //TODO this is probably bad
-    };
+    return memoizeGetters({
+        mindustryDirectory() {
+            return (process.platform == "win32" ? path.join(process.env["APPDATA"], "Mindustry/") :
+                process.platform == "darwin" ? path.join(os.homedir(), "/Library/Application Support/Mindustry/") :
+                    process.platform == "linux" ? path.normalize((process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), "/.local/share"))
+                        + "/Mindustry/") :
+                        fail(`Unsupported platform ${process.platform}`));
+        },
+        modsDirectory() {
+            return path.join(this.mindustryDirectory(), "mods");
+        },
+        launcherDataPath() {
+            return path.join(this.mindustryDirectory(), "launcher");
+        },
+        username() {
+            return process.env["USERNAME"] ?? process.env["USER"] ?? null;
+        },
+        settings() {
+            if (!fs.existsSync(path.join(this.launcherDataPath(), "config.json"))) {
+                log("No config.json file found, creating one. If this is your first launch, this is fine.");
+                if (!fs.existsSync(this.launcherDataPath())) {
+                    fs.mkdirSync(this.launcherDataPath(), {
+                        recursive: true
+                    });
+                }
+                const versionsPath = path.join(this.mindustryDirectory(), "versions");
+                const templateConfig = fs.readFileSync("template-config.json", "utf-8")
+                    .replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath))
+                    .replace(/\r?\n/g, os.EOL);
+                try {
+                    fs.mkdirSync(versionsPath, { recursive: true });
+                }
+                catch (err) {
+                    if (err?.code === 'EEXIST') {
+                        //file already exists, that's fine
+                    }
+                    else
+                        throw err;
+                }
+                fs.writeFileSync(path.join(this.launcherDataPath(), "config.json"), templateConfig);
+                if (opts.commandName != "config")
+                    log("Currently using default settings: run `mindustry config` to edit the settings file.");
+            }
+            const settings = parseJSONC(fs.readFileSync(path.join(this.launcherDataPath(), "config.json"), "utf-8"));
+            if (opts.commandName != "config")
+                validateSettings(settings, this.username());
+            return settings;
+        },
+        externalMods() {
+            return this.settings().externalMods.map(modPath => ({
+                path: modPath,
+                type: fs.existsSync(modPath) ?
+                    fs.lstatSync(modPath).isDirectory() ?
+                        fs.existsSync(path.join(modPath, "build.gradle")) ? "java" : "dir"
+                        : "file"
+                    : (error(`External mod "${modPath}" does not exist.`), "invalid")
+            }));
+        },
+        currentLogStream: () => null,
+        mindustryProcess: () => null,
+        versionName: () => opts.namedArgs.version ?? fail('versionName is not available'),
+        mindustryArgs() {
+            return this.settings().processArgs.concat(mindustryArgs);
+        },
+        jvmArgs() {
+            return this.settings().jvmArgs.concat(jvmArgs);
+        },
+        buildMods: () => opts.namedArgs.buildMods ?? false,
+        version: () => fail('version is not available')
+    });
 }
