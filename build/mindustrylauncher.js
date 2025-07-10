@@ -478,11 +478,15 @@ function validateSettings(input, username) {
 export function init(opts, app) {
     //Change working directory to the same as this program's index.js file
     process.chdir(app.sourceDirectory);
-    let mindustryArgs;
+    let mindustryArgs = [];
     let jvmArgs = [];
     if (opts.positionalArgs.includes("--")) {
-        jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1, opts.positionalArgs.lastIndexOf("--"));
-        mindustryArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
+        const jvmArgsEnd = opts.positionalArgs.indexOf("--") === opts.positionalArgs.lastIndexOf("--") ?
+            undefined
+            : opts.positionalArgs.lastIndexOf("--");
+        jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1, jvmArgsEnd);
+        if (jvmArgsEnd !== undefined)
+            mindustryArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
     }
     else {
         mindustryArgs = opts.positionalArgs;

@@ -499,11 +499,14 @@ export function init(opts:LaunchOptions, app:Application):State {
 	//Change working directory to the same as this program's index.js file
 	process.chdir(app.sourceDirectory);
 
-	let mindustryArgs:string[];
+	let mindustryArgs:string[] = [];
 	let jvmArgs:string[] = [];
 	if(opts.positionalArgs.includes("--")){
-		jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1, opts.positionalArgs.lastIndexOf("--"));
-		mindustryArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
+		const jvmArgsEnd = opts.positionalArgs.indexOf("--") === opts.positionalArgs.lastIndexOf("--") ?
+			undefined
+		: opts.positionalArgs.lastIndexOf("--");
+		jvmArgs = opts.positionalArgs.slice(opts.positionalArgs.indexOf("--") + 1, jvmArgsEnd);
+		if(jvmArgsEnd !== undefined) mindustryArgs = opts.positionalArgs.slice(opts.positionalArgs.lastIndexOf("--") + 1);
 	} else {
 		mindustryArgs = opts.positionalArgs;
 	}
