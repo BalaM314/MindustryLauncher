@@ -155,8 +155,10 @@ export function askQuestion(query) {
         resolve(ans);
     }));
 }
-export async function askYesOrNo(query) {
-    const response = await askQuestion(query);
+export async function askYesOrNo(query, defaultVal = false) {
+    const response = (await askQuestion(query)).toLowerCase().trim();
+    if (!response)
+        return defaultVal;
     return response == "y" || response == "yes";
 }
 /**Copies a directory recursively. */

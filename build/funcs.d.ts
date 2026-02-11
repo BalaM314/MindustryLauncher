@@ -50,7 +50,7 @@ export declare class WindowedMean {
     mean<T>(windowSize: number, notEnoughDataValue: T): number | T;
 }
 export declare function askQuestion(query: string): Promise<string>;
-export declare function askYesOrNo(query: string): Promise<boolean>;
+export declare function askYesOrNo(query: string, defaultVal?: boolean): Promise<boolean>;
 /**Copies a directory recursively. */
 export declare function copyDirectory(source: string, destination: string, exclude?: string): void;
 export declare function parseJSONC(data: string): unknown;

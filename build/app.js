@@ -195,7 +195,7 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
         error(`Version ${state.version.name()} has not been downloaded.`);
         if (state.version.isCustom)
             crash(`Logic error: nonexistent custom version not caught in fromInput`);
-        if (opts.namedArgs.yes || await askYesOrNo("Would you like to download the file? [y/n]:")) {
+        if (opts.namedArgs.yes || await askYesOrNo("Would you like to download the file? [y/n]:", true)) {
             const downloaded = await state.version.download(state);
             if (!downloaded)
                 return 1;

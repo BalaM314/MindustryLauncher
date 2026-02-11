@@ -180,8 +180,9 @@ export function askQuestion(query:string):Promise<string> {
 	}));
 }
 
-export async function askYesOrNo(query:string):Promise<boolean> {
-	const response = await askQuestion(query);
+export async function askYesOrNo(query:string, defaultVal = false):Promise<boolean> {
+	const response = (await askQuestion(query)).toLowerCase().trim();
+	if(!response) return defaultVal;
 	return response == "y" || response == "yes";
 }
 
