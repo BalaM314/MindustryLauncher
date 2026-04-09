@@ -36,6 +36,7 @@ export type Settings = {
 
 export type State = {
 	settings: Settings;
+	settingsOrErr: Settings | [unknown];
 	/**The path of the Mindustry data directory. */
 	mindustryDirectory: string;
 	/**The path of the Mindustry mods directory. */

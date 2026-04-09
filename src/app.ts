@@ -108,7 +108,8 @@ mindustrylauncher.command("config", "Opens the launcher's config.json file.").al
 			.description("Prints the path to the config file and nothing else, for use in scripting."),
 	},
 }).impl(async (opts, app) => {
-	const { settingsPath } = init(opts, app);
+	const { settingsPath, settingsOrErr } = init(opts, app);
+	void settingsOrErr; //this makes it create the settings file if it doesn't exist, but won't fail if the file is invalid
 	if(opts.namedArgs.path){
 		console.log(settingsPath);
 		return;
