@@ -248,9 +248,14 @@ export class Version {
             }
         }
         else {
+            let cleanVersion;
+            if (version.startsWith("v") && version.length > 1)
+                cleanVersion = version.slice(1);
+            else
+                cleanVersion = version;
             for (const [name, versionData] of Object.entries(versionUrls)) {
-                if (version.startsWith(versionData.prefix)) {
-                    const potentialVersionNumber = version.replace(versionData.prefix, "");
+                if (cleanVersion.startsWith(versionData.prefix)) {
+                    const potentialVersionNumber = cleanVersion.replace(versionData.prefix, "");
                     if (!versionData.numberValidator.test(potentialVersionNumber))
                         continue;
                     versionType = name;
