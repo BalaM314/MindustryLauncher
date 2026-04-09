@@ -546,9 +546,11 @@ export function init(opts:LaunchOptions, app:Application):State {
 						recursive: true
 					});
 				}
+				const logsPath = path.join(this.mindustryDirectory(), "logs");
 				const versionsPath = path.join(this.mindustryDirectory(), "versions");
 				const templateConfig = fs.readFileSync("template-config.json", "utf-8")
 					.replace("{{VERSIONSDIR}}", JSON.stringify(versionsPath))
+					.replace("{{LOGSDIR}}", JSON.stringify(logsPath))
 					.replace(/\r?\n/g, os.EOL);
 				try {
 					fs.mkdirSync(versionsPath, {recursive: true});

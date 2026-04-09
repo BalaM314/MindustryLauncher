@@ -62,7 +62,7 @@ JVM arguments can be saved in the config file: run `mindustry config` to edit it
 
 ### Logging
 
-Enable logging in the config file. Make sure to specify a path for log files.
+Enable logging in the config file.
 
 All output will be logged, including errors and chat messages.
 
