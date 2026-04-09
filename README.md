@@ -26,7 +26,7 @@ Supported operating systems: Windows, Linux, MacOS
 Requirements: Node.JS and NPM
 
 1. Run `npm i -g mindustrylauncher`
-2. Run `mindustry config`.
+2. (optional) Run `mindustry config` if you want to change the settings.
 
 ## Supported version types:
 * Vanilla: no prefix
