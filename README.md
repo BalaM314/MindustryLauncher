@@ -7,6 +7,7 @@ A custom launcher for Mindustry built with TypeScript and Node.
 ## Features
 * [x] Logging
 * [x] Version selection
+  * [x] Vanilla, Bleeding edge, Foo's Client v6-v8
 * [x] Automatic version download
 * [x] Build/copy external mods and restart (configurable)
 * [x] Restart automatically on mod file change (configurable)
@@ -27,17 +28,59 @@ Requirements: Node.JS and NPM
 
 1. Run `npm i -g mindustrylauncher`
 2. (optional) Run `mindustry config` if you want to change the settings.
-
-## Supported version types:
-* Vanilla: no prefix
-* Bleeding edge: `be-`
-* Foos v6: `foo-v6-`
-* Foos v7: `foo-`
-* Foos v8: `foo-v8-`
+3. Restart your terminal (close and reopen it).
 
 ## Usage
-CLI only.
+CLI only: you can only use this from the terminal, by typing commands.
 
-`mindustry --version <version> [--compile] [--buildMods] [-- <jvmArgs>... [-- <mindustryArgs>...]]`
+### Quick Start
 
-Run `mindustry help` for more information.
+Run `mindustry`. The launcher will use the latest official release version.
+
+### Specifying version
+
+`mindustry --version 156.2`
+
+List of supported versions:
+* Vanilla: `___._`
+* Bleeding edge: `be-_____`
+* Foos v6: `foo-v6-____`
+* Foos v7: `foo-____`
+* Foos v8: `foo-v8-____`
+
+Specify "latest" instead of the number to fetch the latest version.
+
+### Runtime commands
+
+Type `rs` while the game is running to restart.
+
+### Specifying JVM arguments
+
+Use the arg separator "--" to separate arguments for MindustryLauncher from JVM arguments, like this: `mindustry --version 146 -- -Xmx2G -Xms1G`
+
+JVM arguments can be saved in the config file: run `mindustry config` to edit it.
+
+### Logging
+
+Enable logging in the config file. Make sure to specify a path for log files.
+
+All output will be logged, including errors and chat messages.
+
+Run `mindustry logs` to open your logs folder.
+
+### Custom versions
+
+You can specify a custom version in the config file. If you provide a Mindustry source directory, you can use the `--compile` flag to compile it before launching, or type `rc` while the game is running to exit, compile, and relaunch.
+
+### Mod development
+
+You can provide a list of mods which will be copied to your mods directory before launching. If you provide a Java mod's source directory, you can use the `--buildMods` flag to build mods before copying, or type `rb` while the game is running to exit, rebuild mods, and relaunch.
+
+### More information
+
+There are a few other commands:
+* `mindustry mods` opens your mods folder
+* `mindustry versions` opens your versions folder
+* `mindustry v` prints the version of MindustryLauncher
+
+Run `mindustry help launch` for more information. For a full list of commands, run `mindustry help`.
