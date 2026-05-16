@@ -2,9 +2,11 @@
   "compilerOptions": {
     "target": "es2021",
     "lib": ["ES2022"],
+    "types": ["node"],
     //general
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
+    "module": "node16",
 		"forceConsistentCasingInFileNames": true,
     //project config
 		"skipLibCheck": true,

@@ -1,6 +1,6 @@
 import { ChildProcess } from "child_process";
 import * as fs from "fs";
-import { Version } from "./mindustrylauncher";
+import type { Version } from "./mindustrylauncher.js";
 export type Settings = {
     mindustryJars: {
         folderPath: string;
