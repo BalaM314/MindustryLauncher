@@ -34,8 +34,6 @@ export type State = {
     settingsPath: string;
     /** The java command to use. */
     javaPath: string;
-    /**The named arguments passed to the program. */
-    versionName: string;
     mindustryProcess: ChildProcess | null;
     currentLogStream: fs.WriteStream | null;
     mindustryArgs: string[];

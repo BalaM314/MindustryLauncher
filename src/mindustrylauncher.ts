@@ -399,7 +399,7 @@ export async function compileDirectory(path:string):Promise<boolean> {
 
 export function launch(state:State){
 	
-	log(`Launching Mindustry version ${state.versionName}`);
+	log(`Launching Mindustry version ${state.version.name()}`);
 	if(state.mindustryArgs.length > 0){
 		log(`Arguments for Mindustry: ${state.mindustryArgs.join(", ")}`);
 	}
@@ -598,7 +598,6 @@ export function init(opts:LaunchOptions, app:Application):State {
 		},
 		currentLogStream: () => null,
 		mindustryProcess: () => null,
-		versionName: () => opts.namedArgs.version ?? fail('versionName is not available'),
 		mindustryArgs(){
 			return this.settings().processArgs.concat(mindustryArgs);
 		},
