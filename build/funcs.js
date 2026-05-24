@@ -257,7 +257,7 @@ export function resolveRedirect(url) {
             else {
                 reject(`Error: Server did not respond with redirect location.`);
             }
-        });
+        }).on("error", reject);
     });
 }
 /** @throws NodeJS.Signals | Error */

@@ -183,7 +183,10 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
 		state.version = await Version.fromInput(opts.namedArgs.version || state.settings.defaultVersionName || "latest", state);
 	} catch(err){
 		console.error(err);
-		if(err instanceof ApplicationError && !opts.namedArgs.version && state.settings.defaultVersionName){
+		if(typeof err == "object" && err != null && "code" in err){
+			error(`There is an issue with your network connection. If you are offline, please specify the version number. (Run "mindustry vs -i" to see all installed versions.) Otherwise, try again.`);
+			return 3;
+		} else if(err instanceof ApplicationError && !opts.namedArgs.version && state.settings.defaultVersionName){
 			console.error(`Value "defaultVersionName" in settings is invalid. Run "mindustry config" to edit it. Using version "latest" instead.`);
 			state.version = await Version.fromInput("latest", state);
 		} else throw err;

@@ -336,6 +336,9 @@ export class Version {
         }
         catch (err) {
             error("Download failed: " + stringifyError(err));
+            if (typeof err == "object" && err != null && "code" in err) {
+                error(`There may be an issue with your network connection.`);
+            }
             return false;
         }
     }

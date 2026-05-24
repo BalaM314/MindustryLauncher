@@ -275,7 +275,7 @@ export function resolveRedirect(url:string):Promise<string> {
 			} else {
 				reject(`Error: Server did not respond with redirect location.`);
 			}
-		});
+		}).on("error", reject);
 	});
 }
 
