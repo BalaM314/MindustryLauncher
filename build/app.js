@@ -10,7 +10,7 @@ Contains the mindustrylauncher Application.
 import * as fs from "fs";
 import { promises as fsP } from "fs";
 import * as path from "path";
-import { Application, arg } from "@balam314/cli-app";
+import { Application, ApplicationError, arg } from "@balam314/cli-app";
 import { askYesOrNo, crash, error, formatFileSize, log, spawnAsync, stringifyError } from "./funcs.js";
 import { compileDirectory, copyMods, init, launch, openDirectory, Version } from "./mindustrylauncher.js";
 export const mindustrylauncher = new Application("mindustry", "A launcher for Mindustry built with Node and TS.", {
@@ -164,7 +164,7 @@ mindustrylauncher.command("logs", "Opens the logs folder").aliases("l").args({
 });
 mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
     namedArgs: {
-        version: arg().aliases("v").default("latest")
+        version: arg().aliases("v").optional()
             .description("The version to launch, like 141.3, be-22456, foo-latest, foo-v6-1000, etc"),
         compile: arg().valueless().aliases("c")
             .description("Whether or not to compile a version before launching, if it points to a Mindustry source directory."),
@@ -176,7 +176,19 @@ mindustrylauncher.command("launch", "Launches Mindustry.").default().args({
     positionalArgsText: "[-- <jvmArgs>... [-- <mindustryArgs>...]]"
 }).impl(async (opts, app) => {
     const state = init(opts, app);
-    state.version = await Version.fromInput(opts.namedArgs.version, state);
+    try {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        state.version = await Version.fromInput(opts.namedArgs.version || state.settings.defaultVersionName || "latest", state);
+    }
+    catch (err) {
+        console.error(err);
+        if (err instanceof ApplicationError && !opts.namedArgs.version && state.settings.defaultVersionName) {
+            console.error(`Value "defaultVersionName" in settings is invalid. Run "mindustry config" to edit it. Using version "latest" instead.`);
+            state.version = await Version.fromInput("latest", state);
+        }
+        else
+            throw err;
+    }
     if (state.version.isSourceDirectory) {
         if (opts.namedArgs.compile) {
             const output = await compileDirectory(state.version.path);

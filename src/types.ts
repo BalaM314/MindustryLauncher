@@ -15,6 +15,7 @@ import type { Version } from "./mindustrylauncher.js";
 
 
 export type Settings = {
+	defaultVersionName?: string;
 	mindustryJars: {
 		folderPath: string;
 		customVersionNames: Record<string, string>
@@ -63,7 +64,7 @@ export type State = {
 export type LaunchOptions = {
 	commandName: string;
 	namedArgs: {
-		version?: string;
+		version?: string | null;
 		buildMods?: boolean;
 		info?: boolean;
 		path?: boolean;

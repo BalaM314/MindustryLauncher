@@ -1,6 +1,9 @@
 {
 	//All paths must end in a directory separator(/ on Mac/linux or \ on windows.)
 	//Because this is JSON, the backslash is treated as an escape character so you need to write \\ instead.
+	//Use this to set a default version:
+	// "defaultVersionName": "foo-v8-latest",
+	"defaultVersionName": "",
 	"mindustryJars": {
 		//A folder containing the .jar files for each version.
 		"folderPath": {{VERSIONSDIR}},
