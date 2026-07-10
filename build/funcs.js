@@ -109,6 +109,7 @@ export class CensorKeywordTransform extends Transform {
         this.replace = replace;
     }
     _transform(chunk, encoding, callback) {
+        //"encoding" is just "buffer", don't use it
         callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
     }
 }

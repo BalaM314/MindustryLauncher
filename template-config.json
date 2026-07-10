@@ -37,6 +37,8 @@
 	],
 	//Will restart Mindustry whenever a mod file changes. May be very annoying. May cause you to lose progress in a world.
 	"restartAutomaticallyOnModUpdate": false,
+	//Will restart Mindustry when it requests a restart. Use for the Foo's client "Restart automatically after closing".
+	"restartAutomaticallyOnRequest": true,
 	//Whether to watch the entire java mod directory instead of just the built jar.
 	"watchWholeJavaModDirectory": false,
 	"buildModsConcurrently": false,

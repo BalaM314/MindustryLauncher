@@ -25,6 +25,7 @@ export type Settings = {
 	processArgs: string[];
 	externalMods: string[];
 	restartAutomaticallyOnModUpdate: boolean;
+	restartAutomaticallyOnRequest: boolean;
 	watchWholeJavaModDirectory: boolean;
 	buildModsConcurrently: boolean;
 	logging: {
@@ -59,6 +60,8 @@ export type State = {
 		type: "file" | "dir" | "java" | "invalid";
 	}>;
 	buildMods: boolean;
+	/** The most recent time we saw an "Exiting to reload game." message. If the game exits within 2 seconds of this message, we will restart it automatically. Otherwise, we assume it's fake. */
+	restartRequestedAt: number | null;
 }
 
 export type LaunchOptions = {

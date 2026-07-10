@@ -60,6 +60,12 @@ function startProcess(state:State){
 			.pipe(new (prependTextTransform(() => getTimeComponent(false))))
 			.pipe(state.currentLogStream);
 	}
+	proc.stdout.on("data", (chunk:Buffer) => {
+		const string = chunk.toString();
+		if(string.includes("\x1B[94m\x1B[1m[I]\x1B[0m Exiting to reload game.")){
+			state.restartRequestedAt = Date.now();
+		}
+	});
 	if(state.settings.logging.removeUsername && state.username != null){
 		[proc.stdout, proc.stderr].forEach(stream => stream
 			.pipe(new LoggerHighlightTransform())
@@ -80,7 +86,14 @@ function startProcess(state:State){
 			log(`Process crashed with exit code ${statusCode}!`);
 			process.exitCode = statusCode;
 		}
-		process.exit();
+		setTimeout(() => {
+			if(state.restartRequestedAt && Date.now() - state.restartRequestedAt < 2000){
+				void restart(state, false, false);
+			} else {
+				process.exit();
+			}
+			//Small delay, just in case the stream takes some time
+		}, 100);
 	});
 	
 	return proc;
@@ -488,6 +501,8 @@ function validateSettings(input:unknown, username:string | null):asserts input i
 				fail(`Logging path (${settings.logging.path}) is not a directory.`);
 		}
 
+		settings.restartAutomaticallyOnRequest ??= true; //TODO json schema validation
+
 		if(username == null && settings.logging.removeUsername){
 			error("Could not determine your username, disabling logging.removeUsername");
 			settings.logging.removeUsername = false;
@@ -601,6 +616,7 @@ export function init(opts:LaunchOptions, app:Application):State {
 		},
 		currentLogStream: () => null,
 		mindustryProcess: () => null,
+		restartRequestedAt: () => null,
 		mindustryArgs(){
 			return this.settings().processArgs.concat(mindustryArgs);
 		},

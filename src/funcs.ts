@@ -128,6 +128,7 @@ export class CensorKeywordTransform extends Transform {
 		super(opts);
 	}
 	override _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback):void {
+		//"encoding" is just "buffer", don't use it
 		callback(null, chunk.toString().replaceAll(this.keyword, this.replace));
 	}
 }
