@@ -25,6 +25,7 @@
 		"--enable-native-access=ALL-UNNAMED",
 		"-Dhttps.protocols=TLSv1.2,TLSv1.1,TLSv1",
 		"-Dpolicone",
+		"-Drunning-under-external-launcher",
 		"-XX:+ShowCodeDetailsInExceptionMessages"
 	],
 	//Use this to specify a custom java path or command:
