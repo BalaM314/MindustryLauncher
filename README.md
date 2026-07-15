@@ -6,19 +6,20 @@ A custom launcher for Mindustry built with TypeScript and Node.
 
 ## Features
 * [x] Logging
+  * [x] Remove username from logs (configurable)
 * [x] Version selection
   * [x] Vanilla, Bleeding edge, Foo's Client v6-v8
+  * [x] Custom versions, including .jar files and source directories
 * [x] Automatic version download
+* [x] Compile a source directory before launching or when restarting (configurable)
 * [x] Build/copy external mods and restart (configurable)
 * [x] Restart automatically on mod file change (configurable)
 * [x] Relaunch on command
-* [x] Highly configurable
-* [x] Open source
-* [x] Compile a source directory before launching or when restarting (configurable)
+* [x] Relaunch automatically when reloading mods
 * [x] Output highlighting
-* [x] Remove username from logs (configurable)
 * [x] Default JVM args (configurable)
-* [x] Schematic management features
+* [x] Configurable Java path
+* [x] Open source
 
 ## Installation
 
