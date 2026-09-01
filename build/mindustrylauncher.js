@@ -593,7 +593,7 @@ export function init(opts, app) {
                 path: modPath,
                 type: fs.existsSync(modPath) ?
                     fs.lstatSync(modPath).isDirectory() ?
-                        fs.existsSync(path.join(modPath, "build.gradle")) ? "java" : "dir"
+                        (fs.existsSync(path.join(modPath, "build.gradle")) || fs.existsSync(path.join(modPath, "build.gradle.kts"))) ? "java" : "dir"
                         : "file"
                     : (error(`External mod "${modPath}" does not exist.`), "invalid")
             }));
